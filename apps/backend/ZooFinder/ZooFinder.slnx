@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="ZooFinder.Api/ZooFinder.Api.csproj" />
+  <Project Path="ZooFinder.Application/ZooFinder.Application.csproj" />
+  <Project Path="ZooFinder.Domain/ZooFinder.Domain.csproj" />
+  <Project Path="ZooFinder.Infrastructure/ZooFinder.Infrastructure.csproj" />
+</Solution>
