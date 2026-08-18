@@ -78,14 +78,14 @@ Initial domain concepts may include:
 
 - `Animal`;
 - `DiscussionRoom`;
-- `Message`;
-- `User`;
+- `DiscussionMessage`;
+- `UserAccount`;
 - `UserProfile`;
 - `UserRefreshSession`.
 
 Every `DiscussionRoom` belongs to exactly one `Animal`. An `Animal` may have multiple discussion rooms. A room without an animal is not valid. `DiscussionRoomType` distinguishes the single `General` room from additional `Topic` rooms.
 
-Messages reference `User` directly. Public user data belongs to `UserProfile`, while the initial name-only access is maintained through `UserRefreshSession`. The API issues short-lived JWT access tokens and refresh tokens. Access tokens are not persisted, and `UserRefreshSession` stores only a hash of each refresh token. Optional login and password-hash fields belong to `User`, not to a refresh session.
+Discussion messages reference `UserAccount` directly. Public user data belongs to `UserProfile`, while the initial name-only access is maintained through `UserRefreshSession`. The API issues short-lived JWT access tokens and refresh tokens. Access tokens are not persisted, and `UserRefreshSession` stores only a hash of each refresh token. Optional login and password-hash fields, role, and status belong to `UserAccount`, not to the public profile or a refresh session. Application queries should select only the account or profile data required by a use case instead of always loading all three user-related entities.
 
 The domain project must not depend on ASP.NET Core, Entity Framework Core, Ollama, or MediaWiki clients.
 

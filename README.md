@@ -94,8 +94,8 @@ Initial domain concepts may include:
 
 - `Animal`;
 - `DiscussionRoom`;
-- `Message`;
-- `User`;
+- `DiscussionMessage`;
+- `UserAccount`;
 - `UserProfile`;
 - `UserRefreshSession`.
 
@@ -155,7 +155,27 @@ ZooFinder.Infrastructure
 
 ## Initial Domain Model
 
-The initial domain model contains six entities and three enums. The structures below are language-independent pseudocode and describe data rather than a concrete C# implementation.
+The initial domain model contains six entities and three enums. The C# entities are simple mutable models with public getters and setters. They are grouped by domain area into `Animals`, `Discussions`, and `Users`, while shared entity fields belong to `BaseEntities`.
+
+The structures below are language-independent pseudocode and describe data rather than a concrete C# implementation.
+
+### Common Entity Fields
+
+All six entities inherit from `IdEntity<TId>`:
+
+```text
+IdEntity<TId>
+{
+    Id: TId
+    IsDeleted: Boolean
+
+    CreatedAtUtc: DateTime
+    UpdatedAtUtc: DateTime
+    DeletedAtUtc: DateTime?
+}
+```
+
+New entities are not deleted by default. Soft deletion sets `IsDeleted` and `DeletedAtUtc` without physically removing the entity from persistence.
 
 ### Relationships
 
@@ -164,7 +184,7 @@ Animal 1 ─────── * DiscussionRoom
                          │
                          │ 1
                          ▼
-                      * Message * ─────── 1 User
+              * DiscussionMessage * ─────── 1 UserAccount
                                               │
                                               ├──── 1 UserProfile
                                               │
@@ -174,10 +194,8 @@ Animal 1 ─────── * DiscussionRoom
 ### Animal
 
 ```text
-Animal
+Animal : IdEntity<UUID>
 {
-    Id: UUID
-
     WikipediaPageId: Integer64
     WikipediaLanguageCode: String
     Title: String
@@ -187,8 +205,6 @@ Animal
     ImageUrl: String?
 
     LastSynchronizedAtUtc: DateTime
-    CreatedAtUtc: DateTime
-    UpdatedAtUtc: DateTime
 }
 ```
 
@@ -202,9 +218,8 @@ Constraints:
 ### DiscussionRoom
 
 ```text
-DiscussionRoom
+DiscussionRoom : IdEntity<UUID>
 {
-    Id: UUID
     AnimalId: UUID
 
     Type: DiscussionRoomType
@@ -212,15 +227,13 @@ DiscussionRoom
     Description: String?
 
     IsClosed: Boolean
-
-    CreatedAtUtc: DateTime
-    UpdatedAtUtc: DateTime
 }
 ```
 
 ```text
 DiscussionRoomType
 {
+    None = 0
     General = 1
     Topic = 2
 }
@@ -236,55 +249,47 @@ Constraints:
 - a room cannot be moved to another animal;
 - a `General` room cannot be deleted.
 
-### Message
+### DiscussionMessage
 
 ```text
-Message
+DiscussionMessage : IdEntity<UUID>
 {
-    Id: UUID
-
     DiscussionRoomId: UUID
-    AuthorUserId: UUID
+    AuthorUserAccountId: UUID
 
     Content: String
 
-    CreatedAtUtc: DateTime
     EditedAtUtc: DateTime?
-    DeletedAtUtc: DateTime?
 }
 ```
 
 Constraints:
 
-- every message belongs to one discussion room;
-- every message references `User` directly;
+- every discussion message belongs to one discussion room;
+- every discussion message references `UserAccount` directly;
 - content cannot be empty and has a maximum length;
-- deleted messages remain persisted, but their content is not returned to regular clients;
-- messages cannot be created in closed rooms or by blocked users.
+- deleted discussion messages remain persisted, but their content is not returned to regular clients;
+- discussion messages cannot be created in closed rooms or by blocked users.
 
-### User
+### UserAccount
 
-`User` contains the internal account, authorization state, and optional login credentials. It does not contain public profile data or refresh-token data.
+`UserAccount` contains the internal account, authorization state, and optional login credentials. It does not contain public profile data or refresh-token data.
 
 ```text
-User
+UserAccount : IdEntity<UUID>
 {
-    Id: UUID
-
     Login: String?
     PasswordHash: String?
 
     Role: UserRole
     Status: UserStatus
-
-    CreatedAtUtc: DateTime
-    UpdatedAtUtc: DateTime
 }
 ```
 
 ```text
 UserRole
 {
+    None = 0
     User = 1
     Moderator = 2
     Administrator = 3
@@ -294,6 +299,7 @@ UserRole
 ```text
 UserStatus
 {
+    None = 0
     Active = 1
     Blocked = 2
 }
@@ -301,32 +307,33 @@ UserStatus
 
 Constraints:
 
+- `None` represents an unassigned value and is not a valid persisted role or status;
 - initial name-only registration creates a user without `Login` and `PasswordHash`;
 - `Login` becomes unique when it is introduced;
 - only a password hash is persisted, never the original password;
 - new users receive the `User` role and `Active` status;
-- messages use `User.Id` as the author identifier.
+- discussion messages use `UserAccount.Id` as the author identifier;
+- reading public profile data does not require loading `UserAccount`; application queries should select only the data required by a use case;
+- role claims may be included in short-lived JWT access tokens, while current account status may be checked through the database or a cache for protected operations.
 
 ### UserProfile
 
 `UserProfile` contains public user data.
 
 ```text
-UserProfile
+UserProfile : IdEntity<UUID>
 {
-    UserId: UUID
+    UserAccountId: UUID
 
     DisplayName: String
-
-    CreatedAtUtc: DateTime
-    UpdatedAtUtc: DateTime
 }
 ```
 
 Constraints:
 
-- `UserId` is both the profile primary key and a foreign key to `User`;
-- the relationship between `User` and `UserProfile` is one-to-one;
+- `Id` is the profile primary key;
+- `UserAccountId` is a unique foreign key to `UserAccount`;
+- the relationship between `UserAccount` and `UserProfile` is one-to-one;
 - `DisplayName` is not a login credential and does not have to be unique.
 
 ### UserRefreshSession
@@ -334,14 +341,12 @@ Constraints:
 `UserRefreshSession` represents authorization on one browser or device. It does not contain login or password data.
 
 ```text
-UserRefreshSession
+UserRefreshSession : IdEntity<UUID>
 {
-    Id: UUID
-    UserId: UUID
+    UserAccountId: UUID
 
     RefreshTokenHash: String
 
-    CreatedAtUtc: DateTime
     ExpiresAtUtc: DateTime
     LastUsedAtUtc: DateTime?
     RevokedAtUtc: DateTime?
@@ -360,7 +365,7 @@ Constraints:
 
 ```text
 DisplayName
-    → create User without login credentials
+    → create UserAccount without login credentials
     → create UserProfile
     → create UserRefreshSession
     → issue a short-lived JWT access token
@@ -451,11 +456,11 @@ Changing the model name or introducing another recognition provider must not req
 
 The first version exposes one `General` discussion room for each animal. The domain model supports a one-to-many relationship from `Animal` to `DiscussionRoom`, allowing additional `Topic` rooms to be introduced later.
 
-A discussion room cannot exist without an animal. `DiscussionRoomType` contains `General` and `Topic` values. When a new animal is created, its `General` room is created in the same transaction. Each animal must have exactly one `General` room and may have multiple `Topic` rooms. Room names must be unique within an animal, while different animals may use the same room names.
+A discussion room cannot exist without an animal. `DiscussionRoomType` contains `None`, `General`, and `Topic` values. `None` represents an unassigned value and is not a valid persisted room type. When a new animal is created, its `General` room is created in the same transaction. Each animal must have exactly one `General` room and may have multiple `Topic` rooms. Room names must be unique within an animal, while different animals may use the same room names.
 
-The initial name-only registration creates a `User`, a public `UserProfile`, and a `UserRefreshSession`. Messages reference `User` directly. The API issues a short-lived JWT access token and a refresh token. Access tokens are not persisted; only a hash of the refresh token is stored in `UserRefreshSession`. Login and password-hash fields may be filled later without moving profile data into `User`.
+The initial name-only registration creates a `UserAccount`, a public `UserProfile`, and a `UserRefreshSession`. Discussion messages reference `UserAccount` directly. The API issues a short-lived JWT access token and a refresh token. Access tokens are not persisted; only a hash of the refresh token is stored in `UserRefreshSession`. Login and password-hash fields may be filled later without moving profile data into `UserAccount`.
 
-Real-time message delivery is expected to use ASP.NET Core SignalR. REST endpoints remain responsible for message history and other request-response operations.
+Real-time discussion message delivery is expected to use ASP.NET Core SignalR. REST endpoints remain responsible for discussion message history and other request-response operations.
 
 ## Project Conventions
 
