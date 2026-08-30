@@ -66,8 +66,8 @@ Responsibilities:
 Examples of external integration abstractions:
 
 ```text
-IWikipediaClient
-IAnimalRecognitionClient
+IAnimalInformationService
+IAnimalRecognitionProvider
 ```
 
 ### ZooFinder.Domain
@@ -171,10 +171,10 @@ Title
 ScientificName, when available
 Description, when available
 ImageUrl, when available
-WikipediaUrl
+SourceUrl
 ```
 
-`Animal` stores the Wikipedia page identifier and language code, but does not need to persist `WikipediaUrl`. The current source URL is resolved by the MediaWiki client when the response is created. Optional description and image values may be cached in the animal record.
+`Animal` stores a provider-neutral information source, source item identifier, and language code, but does not persist the current source URL. The initial provider uses MediaWiki. Its Infrastructure implementation resolves the source URL when the response is created. Optional description and image values may be cached in the animal record.
 
 ## Image Recognition Flow
 
@@ -185,8 +185,8 @@ Angular client
     → ZooFinder.Api
     → Ollama container
     → vision model result
-    → MediaWiki API lookup
     → ZooFinder.Api response
+    → Angular client starts a separate animal catalog search
 ```
 
 The initial implementation follows these steps:
@@ -195,8 +195,8 @@ The initial implementation follows these steps:
 2. The API validates the file type and size.
 3. The infrastructure recognition client sends the image and a fixed prompt to Ollama.
 4. Ollama returns structured JSON with a common name, scientific name, and optional alternatives.
-5. The backend searches Wikipedia using the scientific name first and the common name as a fallback.
-6. The API returns the recognition suggestion together with Wikipedia information.
+5. The API returns the recognition suggestion without calling the animal catalog.
+6. The client may start a separate catalog search using the scientific name first and the common name as a fallback.
 
 Example internal recognition result:
 

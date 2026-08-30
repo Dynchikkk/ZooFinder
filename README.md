@@ -2,7 +2,7 @@
 
 ZooFinder is a web platform that combines basic animal information, community discussions, and AI-assisted animal recognition.
 
-This README is the main source of project-level decisions and development principles. Detailed backend notes are available in [docs/backend.md](docs/backend.md).
+This README is the main source of project-level decisions and development principles. Detailed backend notes are available in [docs/backend.md](docs/backend.md), and the Application-layer roadmap is maintained in [docs/application.md](docs/application.md).
 
 ## Product Direction
 
@@ -109,8 +109,8 @@ Examples of application abstractions:
 
 ```text
 IAnimalRepository
-IWikipediaClient
-IAnimalRecognitionClient
+IAnimalInformationService
+IAnimalRecognitionProvider
 ```
 
 The application layer must not depend on concrete database or HTTP client implementations.
@@ -196,8 +196,9 @@ Animal 1 ─────── * DiscussionRoom
 ```text
 Animal : IdEntity<UUID>
 {
-    WikipediaPageId: Integer64
-    WikipediaLanguageCode: String
+    InformationSource: String
+    SourceItemId: String
+    LanguageCode: String
     Title: String
 
     ScientificName: String?
@@ -210,9 +211,9 @@ Animal : IdEntity<UUID>
 
 Constraints:
 
-- `WikipediaLanguageCode + WikipediaPageId` is unique;
+- `InformationSource + LanguageCode + SourceItemId` is unique;
 - `ScientificName`, `ShortDescription`, and `ImageUrl` are optional;
-- `WikipediaUrl` is resolved through the MediaWiki API and is not persisted;
+- `SourceUrl` is resolved through the configured animal-information provider and is not persisted;
 - a new animal and its `General` discussion room are created in the same transaction.
 
 ### DiscussionRoom
@@ -378,10 +379,10 @@ The following values are contracts or transient data and are not domain entities
 
 ```text
 JWT access token
-MediaWiki API response
+Animal information provider response
 Ollama recognition result
 Uploaded recognition image
-WikipediaUrl
+SourceUrl
 ```
 
 ## Persistence Principles
@@ -421,7 +422,7 @@ The first version requests only:
 - one preview image, when available;
 - the Wikipedia article URL.
 
-The domain entity stores the Wikipedia page identifier and language code. The current article URL is resolved through the MediaWiki API and does not need to be persisted in `Animal`.
+The domain entity stores a provider-neutral source name, source item identifier, and language code. The initial provider uses MediaWiki, but Application and Domain do not depend on that choice. The current source URL is resolved by the configured provider and does not need to be persisted in `Animal`.
 
 Responses may be cached to avoid repeated external requests. The exact persistence and expiration strategy will be selected later.
 
@@ -434,8 +435,8 @@ Angular
     → ZooFinder.Api
     → Ollama container
     → vision model result
-    → MediaWiki API lookup
     → ZooFinder.Api response
+    → Angular starts a separate animal catalog search
 ```
 
 Principles:
@@ -444,11 +445,25 @@ Principles:
 - ZooFinder does not calculate custom embeddings or maintain a custom classification index;
 - the ASP.NET application sends the uploaded image and a fixed prompt to Ollama;
 - Ollama returns a structured suggestion containing common and scientific names;
-- the scientific name is used for the primary Wikipedia lookup;
+- the response contains names that the client may use in a separate catalog search;
 - the result is presented as a suggestion, not a guaranteed identification;
 - generated confidence percentages must not be presented as real probabilities;
 - the frontend never communicates with Ollama directly;
-- the concrete recognition client is replaceable through `IAnimalRecognitionClient`.
+- the concrete recognition implementation is replaceable through `IAnimalRecognitionProvider`.
+
+The Application contracts deliberately separate the use-case boundary from the provider boundary:
+
+```text
+AnimalRecognitionRequest
+    → IAnimalRecognitionService
+    → IAnimalRecognitionProvider
+    → AnimalRecognitionProviderResult
+    → AnimalRecognitionResponse
+```
+
+`AnimalRecognitionProviderResult` protects the public response from provider-specific changes. Its candidate type is declared in the same file because it is only a component of that result. The public candidate response follows the same rule and is declared next to `AnimalRecognitionResponse`.
+
+The current Application service validates that the stream is readable and that the declared length is within the configured limit. Validation of the actual image format is intentionally deferred and must be added before the recognition endpoint is exposed publicly; the declared content type alone must not be treated as proof of the file format.
 
 Changing the model name or introducing another recognition provider must not require controller or frontend changes.
 

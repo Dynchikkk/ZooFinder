@@ -5,8 +5,9 @@ namespace ZooFinder.Domain.Animals;
 
 public class Animal : IdEntity<Guid>
 {
-    public long WikipediaPageId { get; set; }
-    public required string WikipediaLanguageCode { get; set; }
+    public required string InformationSource { get; set; }
+    public required string SourceItemId { get; set; }
+    public required string LanguageCode { get; set; }
     public required string Title { get; set; }
 
     public string? ScientificName { get; set; }
