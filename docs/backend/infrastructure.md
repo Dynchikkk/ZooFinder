@@ -22,11 +22,12 @@ ZooFinder.Infrastructure/
 
 | Application port | Infrastructure implementation |
 | --- | --- |
-| `IAnimalRepository` | Entity Framework Core repository |
+| `IAnimalCatalogRepository` | Entity Framework Core catalog repository |
+| `IDiscussionRepository` | Entity Framework Core discussion repository |
 | `IUserAccountRepository` | Entity Framework Core repository |
 | `IUserProfileRepository` | Entity Framework Core repository |
 | `IUserRefreshSessionRepository` | Entity Framework Core repository |
-| `IAnimalInformationService` | MediaWiki service |
+| `IAnimalInformationProvider` | MediaWiki provider |
 | `IAnimalRecognitionProvider` | Ollama provider |
 | `IAccessTokenProvider` | JWT provider |
 | `IRefreshTokenGenerator` | Cryptographic token generator |

@@ -1,4 +1,4 @@
-using ZooFinder.Application.Common.Contracts.Pagination;
+using ZooFinder.Application.Common.Pagination.Contracts;
 using ZooFinder.Application.Features.Animals.Catalog.Contracts;
 
 namespace ZooFinder.Application.Features.Animals.Catalog.Interfaces;

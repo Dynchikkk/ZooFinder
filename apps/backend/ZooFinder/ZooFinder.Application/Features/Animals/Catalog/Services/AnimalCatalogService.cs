@@ -1,13 +1,13 @@
-using ZooFinder.Application.Common.Contracts.Pagination;
-using ZooFinder.Application.Common.Exceptions;
-using ZooFinder.Application.Common.Extensions;
+using ZooFinder.Application.Common.AnimalInformation.Contracts;
+using ZooFinder.Application.Common.AnimalInformation.Extensions;
+using ZooFinder.Application.Common.AnimalInformation.Interfaces;
+using ZooFinder.Application.Common.ErrorHandling.Exceptions;
+using ZooFinder.Application.Common.Language.Validators;
+using ZooFinder.Application.Common.Pagination.Contracts;
+using ZooFinder.Application.Common.Pagination.Extensions;
 using ZooFinder.Application.Features.Animals.Catalog.Contracts;
 using ZooFinder.Application.Features.Animals.Catalog.Interfaces;
 using ZooFinder.Application.Features.Animals.Catalog.Mappers;
-using ZooFinder.Application.Features.Animals.Common.Contracts;
-using ZooFinder.Application.Features.Animals.Common.Extensions;
-using ZooFinder.Application.Features.Animals.Common.Interfaces;
-using ZooFinder.Application.Features.Animals.Common.Validators;
 
 namespace ZooFinder.Application.Features.Animals.Catalog.Services;
 
@@ -18,15 +18,15 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
     private const int MaximumInformationSourceLength = 100;
     private const int MaximumSourceItemIdLength = 500;
 
-    private readonly IAnimalInformationService _animalInformationService;
-    private readonly IAnimalRepository _animalRepository;
+    private readonly IAnimalInformationProvider _animalInformationProvider;
+    private readonly IAnimalCatalogRepository _animalCatalogRepository;
 
     public AnimalCatalogService(
-        IAnimalInformationService animalInformationService,
-        IAnimalRepository animalRepository)
+        IAnimalInformationProvider animalInformationProvider,
+        IAnimalCatalogRepository animalCatalogRepository)
     {
-        _animalInformationService = animalInformationService;
-        _animalRepository = animalRepository;
+        _animalInformationProvider = animalInformationProvider;
+        _animalCatalogRepository = animalCatalogRepository;
     }
 
     public async Task<CursorPageResponse<AnimalCardResponse>> SearchAsync(
@@ -44,7 +44,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
 
         if (request.Scope == AnimalSearchScope.LocalCatalog)
         {
-            var localPage = await _animalRepository.SearchAsync(
+            var localPage = await _animalCatalogRepository.SearchAsync(
                 searchTerm,
                 languageCode,
                 pageRequest,
@@ -55,7 +55,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
                 localPage.NextCursor);
         }
 
-        var externalPage = await _animalInformationService.SearchAsync(
+        var externalPage = await _animalInformationProvider.SearchAsync(
             searchTerm,
             languageCode,
             pageRequest,
@@ -78,7 +78,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
 
         ValidateAnimalIdentity(informationSource, sourceItemId, languageCode);
 
-        var information = await _animalInformationService.GetDetailsAsync(
+        var information = await _animalInformationProvider.GetDetailsAsync(
             informationSource,
             sourceItemId,
             languageCode,
@@ -89,7 +89,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
             throw new NotFoundException("Animal information was not found.");
         }
 
-        var localAnimal = await _animalRepository.GetBySourceItemAsync(
+        var localAnimal = await _animalCatalogRepository.GetBySourceItemAsync(
             informationSource,
             sourceItemId,
             languageCode,
@@ -115,7 +115,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
             throw new RequestValidationException("Animal search scope is not supported.");
         }
 
-        AnimalInformationValidator.ValidateLanguageCode(languageCode);
+        LanguageCodeValidator.Validate(languageCode);
 
         if (limit < 1 || limit > PaginationDefaults.MaximumPageSize)
         {
@@ -141,6 +141,6 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
                 $"Source item ID length must be between 1 and {MaximumSourceItemIdLength} characters.");
         }
 
-        AnimalInformationValidator.ValidateLanguageCode(languageCode);
+        LanguageCodeValidator.Validate(languageCode);
     }
 }

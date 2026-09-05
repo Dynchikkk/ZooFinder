@@ -1,4 +1,4 @@
-namespace ZooFinder.Application.Features.Animals.Common.Extensions;
+namespace ZooFinder.Application.Common.AnimalInformation.Extensions;
 
 public static class AnimalInformationExtensions
 {

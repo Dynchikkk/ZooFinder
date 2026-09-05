@@ -1,12 +1,10 @@
-using ZooFinder.Application.Common.Contracts.Pagination;
+using ZooFinder.Application.Common.Pagination.Contracts;
 using ZooFinder.Domain.Animals;
 
-namespace ZooFinder.Application.Features.Animals.Common.Interfaces;
+namespace ZooFinder.Application.Features.Animals.Catalog.Interfaces;
 
-public interface IAnimalRepository
+public interface IAnimalCatalogRepository
 {
-    Task<Animal?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
-
     Task<Animal?> GetBySourceItemAsync(
         string informationSource,
         string sourceItemId,
@@ -18,8 +16,4 @@ public interface IAnimalRepository
         string languageCode,
         CursorPageRequest pageRequest,
         CancellationToken cancellationToken);
-
-    Task AddAsync(Animal animal, CancellationToken cancellationToken);
-
-    Task UpdateAsync(Animal animal, CancellationToken cancellationToken);
 }

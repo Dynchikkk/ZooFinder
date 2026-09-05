@@ -1,4 +1,4 @@
-namespace ZooFinder.Application.Common.Contracts.Pagination;
+namespace ZooFinder.Application.Common.Pagination.Contracts;
 
 public sealed record OffsetPageResponse<T>(
     IReadOnlyList<T> Items,

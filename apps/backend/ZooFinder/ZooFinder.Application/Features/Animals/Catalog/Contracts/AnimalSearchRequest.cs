@@ -1,6 +1,5 @@
-using ZooFinder.Application.Common.Constants;
-using ZooFinder.Application.Common.Contracts.Pagination;
-using ZooFinder.Application.Features.Animals.Common.Contracts;
+using ZooFinder.Application.Common.Language.Constants;
+using ZooFinder.Application.Common.Pagination.Contracts;
 
 namespace ZooFinder.Application.Features.Animals.Catalog.Contracts;
 

@@ -46,8 +46,8 @@ Dependencies point toward Domain. Domain contains the model, Application contain
 
 ```text
 Client → API → AnimalCatalogService
-                    ├─ external scope → IAnimalInformationService
-                    └─ local scope ───→ IAnimalRepository
+                    ├─ external scope → IAnimalInformationProvider
+                    └─ local scope ───→ IAnimalCatalogRepository
 ```
 
 Catalog search and animal-page retrieval are read-only.

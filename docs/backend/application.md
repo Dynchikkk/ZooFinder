@@ -7,14 +7,20 @@
 ```text
 ZooFinder.Application/
 ├─ Common/
-│  ├─ Constants/
-│  ├─ Contracts/
-│  ├─ Exceptions/
-│  ├─ Extensions/
-│  └─ Interfaces/
+│  ├─ AnimalInformation/
+│  │  ├─ Contracts/
+│  │  ├─ Extensions/
+│  │  └─ Interfaces/
+│  ├─ ErrorHandling/
+│  │  └─ Exceptions/
+│  ├─ Language/
+│  │  ├─ Constants/
+│  │  └─ Validators/
+│  └─ Pagination/
+│     ├─ Contracts/
+│     └─ Extensions/
 └─ Features/
    ├─ Animals/
-   │  ├─ Common/
    │  ├─ Catalog/
    │  └─ Recognition/
    ├─ Users/
@@ -22,9 +28,30 @@ ZooFinder.Application/
    └─ Discussions/
 ```
 
-Each use case contains only the required `Contracts`, `Interfaces`, `Mappers`, `Services`, and validators.
+A directory is either a container or a module.
 
-Feature-specific shared code belongs to `Features/<Feature>/Common`. Code shared by multiple top-level features belongs to `Application/Common`.
+- A container groups modules and contains no C# files. `Common`, `Features`, and `Features/Animals` are containers.
+- A module contains code and uses only the standard role directories listed below.
+- Code is placed in its role directory even when that directory contains one file.
+- A module does not introduce arbitrary role-directory names.
+
+Standard module directories:
+
+| Directory | Contents |
+| --- | --- |
+| `Constants` | Named constant values |
+| `Contracts` | Requests, responses, results, and contract enums |
+| `Exceptions` | Module-specific exception types |
+| `Extensions` | Extension methods |
+| `Interfaces` | Service, repository, provider, and publisher interfaces |
+| `Mappers` | Contract and entity transformations |
+| `Services` | Application service implementations |
+| `Settings` | Application-level settings contracts |
+| `Validators` | Input and contract validation |
+
+Directories outside this list require an architecture decision and an update to this document.
+
+Feature-specific shared code belongs to a named module under the nearest feature container. Code shared by different top-level features belongs to a named module under `Application/Common`.
 
 ## Conventions
 
@@ -81,9 +108,13 @@ The API maps Application exceptions to HTTP responses.
 
 ## Animals
 
-### Common
+### Shared animal information
 
-`IAnimalInformationService` provides external animal information:
+Animal-information contracts, normalization, and language validation belong to global `Application/Common`.
+
+`IAnimalInformationProvider` and its result contracts belong to global `Application/Common` because both Animals and Discussions use the external animal-information boundary.
+
+`IAnimalInformationProvider` provides:
 
 ```text
 SearchAsync
@@ -98,14 +129,11 @@ SourceItemId
 LanguageCode
 ```
 
-`IAnimalRepository` provides local animal operations:
+`IAnimalCatalogRepository` belongs to Catalog and provides its local read operations:
 
 ```text
-GetByIdAsync
 GetBySourceItemAsync
 SearchAsync
-AddAsync
-UpdateAsync
 ```
 
 Supported language codes are `en` and `ru`.
@@ -123,8 +151,8 @@ Search scopes:
 
 | Scope | Source |
 | --- | --- |
-| `ExternalCatalog` | `IAnimalInformationService` |
-| `LocalCatalog` | `IAnimalRepository` |
+| `ExternalCatalog` | `IAnimalInformationProvider` |
+| `LocalCatalog` | `IAnimalCatalogRepository` |
 
 Search returns compact `AnimalCardResponse` items. Animal retrieval returns `AnimalPageResponse` with full provider information.
 
@@ -203,14 +231,7 @@ IRefreshTokenGenerator
 IRefreshTokenHasher
 ```
 
-Repository ports shared by Users and Auth belong to:
-
-```text
-Common/Interfaces/Repositories/
-├─ IUserAccountRepository.cs
-├─ IUserProfileRepository.cs
-└─ IUserRefreshSessionRepository.cs
-```
+Repository ports belong to the consuming module and expose only the operations required by its use cases.
 
 Refresh-token rotation replaces the previous token hash. A user may revoke one session or all sessions.
 
@@ -240,6 +261,8 @@ The first message for an external animal creates the local `Animal`, its `Genera
 Discussion writes verify the account status, room state, message content, and author permissions.
 
 Real-time delivery uses an `IDiscussionEventPublisher` port. SignalR remains outside Application.
+
+`IDiscussionRepository` belongs to Discussions and contains its room, message, and first-discussion persistence operations.
 
 ## Transactions and Registration
 

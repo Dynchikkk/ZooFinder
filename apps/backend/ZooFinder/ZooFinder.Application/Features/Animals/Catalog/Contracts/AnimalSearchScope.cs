@@ -1,4 +1,4 @@
-namespace ZooFinder.Application.Features.Animals.Common.Contracts;
+namespace ZooFinder.Application.Features.Animals.Catalog.Contracts;
 
 public enum AnimalSearchScope
 {

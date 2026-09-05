@@ -1,4 +1,4 @@
-namespace ZooFinder.Application.Common.Constants;
+namespace ZooFinder.Application.Common.Language.Constants;
 
 public static class LanguageCodes
 {

@@ -1,6 +1,6 @@
-using ZooFinder.Application.Common.Exceptions;
-using ZooFinder.Application.Features.Animals.Common.Extensions;
-using ZooFinder.Application.Features.Animals.Common.Validators;
+using ZooFinder.Application.Common.AnimalInformation.Extensions;
+using ZooFinder.Application.Common.ErrorHandling.Exceptions;
+using ZooFinder.Application.Common.Language.Validators;
 using ZooFinder.Application.Features.Animals.Recognition.Contracts;
 using ZooFinder.Application.Features.Animals.Recognition.Interfaces;
 using ZooFinder.Application.Features.Animals.Recognition.Mappers;
@@ -68,7 +68,7 @@ public sealed class AnimalRecognitionService : IAnimalRecognitionService
                 $"Image length must be between 1 and {MaximumImageLength} bytes.");
         }
 
-        AnimalInformationValidator.ValidateLanguageCode(languageCode);
+        LanguageCodeValidator.Validate(languageCode);
     }
 
     private static void ValidateProviderResult(AnimalRecognitionProviderResult result)

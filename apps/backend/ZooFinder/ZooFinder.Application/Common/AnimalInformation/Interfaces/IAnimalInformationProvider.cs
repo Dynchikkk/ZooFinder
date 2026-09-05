@@ -1,9 +1,9 @@
-using ZooFinder.Application.Common.Contracts.Pagination;
-using ZooFinder.Application.Features.Animals.Common.Contracts;
+using ZooFinder.Application.Common.AnimalInformation.Contracts;
+using ZooFinder.Application.Common.Pagination.Contracts;
 
-namespace ZooFinder.Application.Features.Animals.Common.Interfaces;
+namespace ZooFinder.Application.Common.AnimalInformation.Interfaces;
 
-public interface IAnimalInformationService
+public interface IAnimalInformationProvider
 {
     Task<CursorPageResponse<AnimalInformationSearchResult>> SearchAsync(
         string searchTerm,

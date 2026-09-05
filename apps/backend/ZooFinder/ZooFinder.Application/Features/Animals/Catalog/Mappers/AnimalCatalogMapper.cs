@@ -1,5 +1,5 @@
+using ZooFinder.Application.Common.AnimalInformation.Contracts;
 using ZooFinder.Application.Features.Animals.Catalog.Contracts;
-using ZooFinder.Application.Features.Animals.Common.Contracts;
 using ZooFinder.Domain.Animals;
 
 namespace ZooFinder.Application.Features.Animals.Catalog.Mappers;

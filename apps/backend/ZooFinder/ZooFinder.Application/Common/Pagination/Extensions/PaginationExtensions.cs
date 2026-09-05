@@ -1,4 +1,4 @@
-namespace ZooFinder.Application.Common.Extensions;
+namespace ZooFinder.Application.Common.Pagination.Extensions;
 
 public static class PaginationExtensions
 {

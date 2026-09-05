@@ -1,4 +1,4 @@
-namespace ZooFinder.Application.Features.Animals.Common.Contracts;
+namespace ZooFinder.Application.Common.AnimalInformation.Contracts;
 
 public sealed record AnimalInformationSearchResult(
     string InformationSource,

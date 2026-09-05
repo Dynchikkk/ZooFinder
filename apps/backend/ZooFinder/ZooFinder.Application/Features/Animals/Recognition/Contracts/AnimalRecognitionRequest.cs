@@ -1,4 +1,4 @@
-using ZooFinder.Application.Common.Constants;
+using ZooFinder.Application.Common.Language.Constants;
 
 namespace ZooFinder.Application.Features.Animals.Recognition.Contracts;
 
