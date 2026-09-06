@@ -116,7 +116,7 @@ Rules:
 
 `UserStatus` values are `None`, `Active`, and `Blocked`.
 
-New name-only accounts use the `User` role and `Active` status. `None` is not a valid persisted role or status.
+New locally registered accounts use the `User` role and `Active` status. Their normalized login is unique and their password is persisted only as a hash. `None` is not a valid persisted role or status.
 
 ## UserProfile
 

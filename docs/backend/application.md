@@ -102,6 +102,8 @@ Search results and message history use cursor pagination.
 | --- | --- |
 | `RequestValidationException` | Invalid use-case input |
 | `NotFoundException` | Requested resource was not found |
+| `ConflictException` | Requested operation conflicts with existing state |
+| `UnauthorizedException` | Authentication credentials or session are invalid |
 
 The API maps Application exceptions to HTTP responses.
 
@@ -213,30 +215,56 @@ Public-profile and current-profile endpoints use the same read operation while t
 
 ## Authentication
 
-> **Status:** In progress. This section may change.
-
 `IAuthService` provides:
 
 ```text
-RegisterByNameAsync
+RegisterAsync
+LoginAsync
 RefreshSessionAsync
 RevokeSessionAsync
 RevokeAllSessionsAsync
 ```
 
-Registration creates `UserAccount`, `UserProfile`, and `UserRefreshSession` in one transaction.
+Contracts:
 
-Security ports:
+```text
+RegisterRequest
+LoginRequest
+RefreshSessionRequest
+RevokeSessionRequest
+AuthResponse
+```
+
+`AuthResponse` contains the account ID, access token, refresh token, and refresh-session expiration time.
+
+Security ports owned by Auth:
 
 ```text
 IAccessTokenProvider
+IPasswordHasher
 IRefreshTokenGenerator
 IRefreshTokenHasher
 ```
 
-Repository ports belong to the consuming module and expose only the operations required by its use cases.
+`IAuthRepository` provides:
 
-Refresh-token rotation replaces the previous token hash. A user may revoke one session or all sessions.
+```text
+IsLoginTakenAsync
+GetUserAccountByLoginAsync
+AddUserAccountAsync
+AddRefreshSessionAsync
+GetRefreshSessionWithUserAccountByTokenHashAsync
+UpdateRefreshSessionAsync
+RevokeAllRefreshSessionsAsync
+```
+
+Registration accepts a login and password. It creates an active account with the `User` role, a profile, and the first refresh session. The initial display name equals the normalized login and may later be changed through Users. Logins are normalized to lowercase and must be unique. Passwords are passed to `IPasswordHasher`; only the resulting hash is persisted.
+
+Login verifies the password hash and creates a separate refresh session. Invalid credentials and inactive accounts produce the same authentication error.
+
+Only a refresh-token hash is persisted. Refreshing a session validates the session and account, replaces the token hash, extends the expiration time, and records the last-use time. A user may revoke one session by refresh token or all sessions by account ID.
+
+`AuthSettings.RefreshSessionLifetime` defines the refresh-session lifetime. `TimeProvider` supplies the current UTC time.
 
 ## Discussions
 
