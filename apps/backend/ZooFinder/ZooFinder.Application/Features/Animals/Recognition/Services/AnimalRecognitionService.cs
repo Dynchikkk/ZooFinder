@@ -3,7 +3,6 @@ using ZooFinder.Application.Common.ErrorHandling.Exceptions;
 using ZooFinder.Application.Common.Language.Validators;
 using ZooFinder.Application.Features.Animals.Recognition.Contracts;
 using ZooFinder.Application.Features.Animals.Recognition.Interfaces;
-using ZooFinder.Application.Features.Animals.Recognition.Mappers;
 
 namespace ZooFinder.Application.Features.Animals.Recognition.Services;
 
@@ -35,11 +34,23 @@ public sealed class AnimalRecognitionService : IAnimalRecognitionService
             request.ImageStream,
             contentType,
             languageCode,
-            cancellationToken);
+            cancellationToken)
+            ?? throw new InvalidOperationException(
+                "Animal recognition provider returned no result.");
 
         ValidateProviderResult(result);
 
-        return AnimalRecognitionMapper.ToResponse(result);
+        AnimalRecognitionCandidateResponse[] alternatives = result.Alternatives
+            .Select(candidate => new AnimalRecognitionCandidateResponse(
+                NormalizeName(candidate.CommonName),
+                NormalizeName(candidate.ScientificName)))
+            .ToArray();
+
+        return new AnimalRecognitionResponse(
+            result.IsAnimal,
+            NormalizeName(result.CommonName),
+            NormalizeName(result.ScientificName),
+            alternatives);
     }
 
     private static void Validate(
@@ -73,8 +84,6 @@ public sealed class AnimalRecognitionService : IAnimalRecognitionService
 
     private static void ValidateProviderResult(AnimalRecognitionProviderResult result)
     {
-        ArgumentNullException.ThrowIfNull(result);
-
         if (result.IsAnimal &&
             string.IsNullOrWhiteSpace(result.CommonName) &&
             string.IsNullOrWhiteSpace(result.ScientificName))
@@ -82,5 +91,10 @@ public sealed class AnimalRecognitionService : IAnimalRecognitionService
             throw new InvalidOperationException(
                 "Animal recognition provider returned an animal without a name.");
         }
+    }
+
+    private static string? NormalizeName(string? name)
+    {
+        return string.IsNullOrWhiteSpace(name) ? null : name.Trim();
     }
 }

@@ -127,7 +127,7 @@ New name-only accounts use the `User` role and `Active` status. `None` is not a 
 | `UserAccountId` | `Guid` |
 | `DisplayName` | `string` |
 
-One account has one profile. `DisplayName` is not a credential and is not unique.
+One account has one profile. `DisplayName` is not a credential, is not unique, and contains between 1 and 100 characters after normalization.
 
 ## UserRefreshSession
 

@@ -44,7 +44,6 @@ Standard module directories:
 | `Exceptions` | Module-specific exception types |
 | `Extensions` | Extension methods |
 | `Interfaces` | Service, repository, provider, and publisher interfaces |
-| `Mappers` | Contract and entity transformations |
 | `Services` | Application service implementations |
 | `Settings` | Application-level settings contracts |
 | `Validators` | Input and contract validation |
@@ -62,7 +61,7 @@ Feature-specific shared code belongs to a named module under the nearest feature
 - Responses leaving a use case use the `Response` suffix.
 - Results returned by internal providers use the `Result` suffix.
 - Immutable contracts are records.
-- Mappers contain contract and entity transformations.
+- Services create response contracts directly at the return site.
 - Services do not call neighboring feature services.
 
 ## Pagination
@@ -189,13 +188,10 @@ Recognition does not call Catalog and does not persist the image. The client use
 
 ## Users
 
-> **Status:** In progress. This section may change.
-
-`IUserService` provides:
+`IUserProfileService` provides:
 
 ```text
-GetPublicProfileAsync
-GetCurrentProfileAsync
+GetProfileAsync
 UpdateProfileAsync
 ```
 
@@ -206,7 +202,14 @@ UserProfileResponse
 UpdateUserProfileRequest
 ```
 
-Profile reads select profile data without requiring the full account graph. Profile updates modify `DisplayName` for the authenticated account.
+`IUserProfileRepository` provides:
+
+```text
+GetByUserAccountIdAsync
+UpdateAsync
+```
+
+Public-profile and current-profile endpoints use the same read operation while their response data is identical. Profile reads select profile data without requiring the full account graph. Profile updates modify `DisplayName` for the authenticated account. A normalized display name contains between 1 and 100 characters.
 
 ## Authentication
 

@@ -1,4 +1,3 @@
-using ZooFinder.Application.Common.AnimalInformation.Contracts;
 using ZooFinder.Application.Common.AnimalInformation.Extensions;
 using ZooFinder.Application.Common.AnimalInformation.Interfaces;
 using ZooFinder.Application.Common.ErrorHandling.Exceptions;
@@ -7,7 +6,6 @@ using ZooFinder.Application.Common.Pagination.Contracts;
 using ZooFinder.Application.Common.Pagination.Extensions;
 using ZooFinder.Application.Features.Animals.Catalog.Contracts;
 using ZooFinder.Application.Features.Animals.Catalog.Interfaces;
-using ZooFinder.Application.Features.Animals.Catalog.Mappers;
 
 namespace ZooFinder.Application.Features.Animals.Catalog.Services;
 
@@ -38,32 +36,24 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
         string searchTerm = request.SearchTerm?.Trim() ?? string.Empty;
         string languageCode = request.LanguageCode.NormalizeLanguageCode();
 
-        ValidateSearchRequest(searchTerm, languageCode, request.Scope, request.Limit);
+        ValidateSearchRequest(searchTerm, languageCode, request.Limit);
 
         var pageRequest = new CursorPageRequest(request.Cursor.NormalizeCursor(), request.Limit);
 
-        if (request.Scope == AnimalSearchScope.LocalCatalog)
+        return request.Scope switch
         {
-            var localPage = await _animalCatalogRepository.SearchAsync(
+            AnimalSearchScope.LocalCatalog => await SearchLocalCatalogAsync(
                 searchTerm,
                 languageCode,
                 pageRequest,
-                cancellationToken);
-
-            return new CursorPageResponse<AnimalCardResponse>(
-                [.. localPage.Items.Select(AnimalCatalogMapper.ToCardResponse)],
-                localPage.NextCursor);
-        }
-
-        var externalPage = await _animalInformationProvider.SearchAsync(
-            searchTerm,
-            languageCode,
-            pageRequest,
-            cancellationToken);
-
-        return new CursorPageResponse<AnimalCardResponse>(
-            [.. externalPage.Items.Select(AnimalCatalogMapper.ToCardResponse)],
-            externalPage.NextCursor);
+                cancellationToken),
+            AnimalSearchScope.ExternalCatalog => await SearchExternalCatalogAsync(
+                searchTerm,
+                languageCode,
+                pageRequest,
+                cancellationToken),
+            _ => throw new RequestValidationException("Animal search scope is not supported.")
+        };
     }
 
     public async Task<AnimalPageResponse> GetAnimalAsync(
@@ -82,12 +72,8 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
             informationSource,
             sourceItemId,
             languageCode,
-            cancellationToken);
-
-        if (information == null)
-        {
-            throw new NotFoundException("Animal information was not found.");
-        }
+            cancellationToken)
+            ?? throw new NotFoundException("Animal information was not found.");
 
         var localAnimal = await _animalCatalogRepository.GetBySourceItemAsync(
             informationSource,
@@ -95,24 +81,79 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
             languageCode,
             cancellationToken);
 
-        return AnimalCatalogMapper.ToPageResponse(information, localAnimal?.Id);
+        return new AnimalPageResponse(
+            localAnimal?.Id,
+            information.InformationSource,
+            information.SourceItemId,
+            information.LanguageCode,
+            information.Title,
+            information.ScientificName,
+            information.ShortDescription,
+            information.ImageUrl,
+            information.SourceUrl);
+    }
+
+    private async Task<CursorPageResponse<AnimalCardResponse>> SearchLocalCatalogAsync(
+        string searchTerm,
+        string languageCode,
+        CursorPageRequest pageRequest,
+        CancellationToken cancellationToken)
+    {
+        var page = await _animalCatalogRepository.SearchAsync(
+            searchTerm,
+            languageCode,
+            pageRequest,
+            cancellationToken);
+
+        AnimalCardResponse[] items = page.Items
+            .Select(animal => new AnimalCardResponse(
+                animal.Id,
+                animal.InformationSource,
+                animal.SourceItemId,
+                animal.LanguageCode,
+                animal.Title,
+                animal.ScientificName,
+                animal.ImageUrl))
+            .ToArray();
+
+        return new CursorPageResponse<AnimalCardResponse>(items, page.NextCursor);
+    }
+
+    private async Task<CursorPageResponse<AnimalCardResponse>> SearchExternalCatalogAsync(
+        string searchTerm,
+        string languageCode,
+        CursorPageRequest pageRequest,
+        CancellationToken cancellationToken)
+    {
+        var page = await _animalInformationProvider.SearchAsync(
+            searchTerm,
+            languageCode,
+            pageRequest,
+            cancellationToken);
+
+        AnimalCardResponse[] items = page.Items
+            .Select(result => new AnimalCardResponse(
+                null,
+                result.InformationSource,
+                result.SourceItemId,
+                result.LanguageCode,
+                result.Title,
+                result.ScientificName,
+                result.ImageUrl))
+            .ToArray();
+
+        return new CursorPageResponse<AnimalCardResponse>(items, page.NextCursor);
     }
 
     private static void ValidateSearchRequest(
         string searchTerm,
         string languageCode,
-        AnimalSearchScope scope,
         int limit)
     {
         if (searchTerm.Length < MinimumSearchTermLength || searchTerm.Length > MaximumSearchTermLength)
         {
             throw new RequestValidationException(
                 $"Search term length must be between {MinimumSearchTermLength} and {MaximumSearchTermLength} characters.");
-        }
-
-        if (scope != AnimalSearchScope.ExternalCatalog && scope != AnimalSearchScope.LocalCatalog)
-        {
-            throw new RequestValidationException("Animal search scope is not supported.");
         }
 
         LanguageCodeValidator.Validate(languageCode);
