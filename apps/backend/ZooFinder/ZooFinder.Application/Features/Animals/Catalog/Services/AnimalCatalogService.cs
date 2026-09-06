@@ -1,5 +1,6 @@
 using ZooFinder.Application.Common.AnimalInformation.Extensions;
 using ZooFinder.Application.Common.AnimalInformation.Interfaces;
+using ZooFinder.Application.Common.AnimalInformation.Validators;
 using ZooFinder.Application.Common.ErrorHandling.Exceptions;
 using ZooFinder.Application.Common.Language.Validators;
 using ZooFinder.Application.Common.Pagination.Contracts;
@@ -13,8 +14,6 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
 {
     private const int MinimumSearchTermLength = 2;
     private const int MaximumSearchTermLength = 200;
-    private const int MaximumInformationSourceLength = 100;
-    private const int MaximumSourceItemIdLength = 500;
 
     private readonly IAnimalInformationProvider _animalInformationProvider;
     private readonly IAnimalCatalogRepository _animalCatalogRepository;
@@ -66,7 +65,10 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
         string sourceItemId = request.SourceItemId.NormalizeSourceItemId();
         string languageCode = request.LanguageCode.NormalizeLanguageCode();
 
-        ValidateAnimalIdentity(informationSource, sourceItemId, languageCode);
+        AnimalInformationValidator.ValidateIdentity(
+            informationSource,
+            sourceItemId,
+            languageCode);
 
         var information = await _animalInformationProvider.GetDetailsAsync(
             informationSource,
@@ -165,23 +167,4 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
         }
     }
 
-    private static void ValidateAnimalIdentity(
-        string informationSource,
-        string sourceItemId,
-        string languageCode)
-    {
-        if (informationSource.Length == 0 || informationSource.Length > MaximumInformationSourceLength)
-        {
-            throw new RequestValidationException(
-                $"Information source length must be between 1 and {MaximumInformationSourceLength} characters.");
-        }
-
-        if (sourceItemId.Length == 0 || sourceItemId.Length > MaximumSourceItemIdLength)
-        {
-            throw new RequestValidationException(
-                $"Source item ID length must be between 1 and {MaximumSourceItemIdLength} characters.");
-        }
-
-        LanguageCodeValidator.Validate(languageCode);
-    }
 }

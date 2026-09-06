@@ -56,7 +56,7 @@ Rules:
 - `(InformationSource, LanguageCode, SourceItemId)` identifies one sourced animal.
 - `SourceUrl` is resolved by the information provider and is not persisted.
 - Search results are not persisted.
-- An animal is persisted when its first discussion is created.
+- An animal is persisted when its General discussion room is created. The room may initially contain no messages.
 
 ## DiscussionRoom
 

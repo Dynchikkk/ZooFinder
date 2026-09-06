@@ -8,9 +8,11 @@
 ZooFinder.Application/
 ├─ Common/
 │  ├─ AnimalInformation/
+│  │  ├─ Constants/
 │  │  ├─ Contracts/
 │  │  ├─ Extensions/
-│  │  └─ Interfaces/
+│  │  ├─ Interfaces/
+│  │  └─ Validators/
 │  ├─ ErrorHandling/
 │  │  └─ Exceptions/
 │  ├─ Language/
@@ -104,6 +106,7 @@ Search results and message history use cursor pagination.
 | `NotFoundException` | Requested resource was not found |
 | `ConflictException` | Requested operation conflicts with existing state |
 | `UnauthorizedException` | Authentication credentials or session are invalid |
+| `ForbiddenException` | Authenticated account cannot perform the operation |
 
 The API maps Application exceptions to HTTP responses.
 
@@ -268,32 +271,64 @@ Only a refresh-token hash is persisted. Refreshing a session validates the sessi
 
 ## Discussions
 
-> **Status:** In progress. This section may change.
-
-Discussions are divided into shared contracts, rooms, and messages:
+Discussions are divided into shared persistence, rooms, and messages:
 
 ```text
 Features/Discussions/
 ├─ Common/
+│  ├─ Interfaces/
+│  └─ Validators/
 ├─ Rooms/
+│  ├─ Constants/
+│  ├─ Contracts/
+│  ├─ Interfaces/
+│  ├─ Services/
+│  └─ Validators/
 └─ Messages/
+   ├─ Constants/
+   ├─ Contracts/
+   ├─ Interfaces/
+   ├─ Services/
+   └─ Validators/
 ```
 
-Use cases:
+`IDiscussionRoomService` provides:
 
-- retrieve an animal's `General` room;
-- retrieve cursor-paginated message history;
-- send a message;
-- edit a message;
-- soft-delete a message.
+```text
+GetGeneralRoomAsync
+CreateDiscussionAsync
+```
 
-The first message for an external animal creates the local `Animal`, its `General` room, and the message in one transaction.
+`GetGeneralRoomAsync` returns the persisted animal's General room or `null` when no discussion exists.
 
-Discussion writes verify the account status, room state, message content, and author permissions.
+`CreateDiscussionAsync` is idempotent by sourced-animal identity. It returns an existing General room or obtains current animal information and creates the local animal and room through one repository operation. An empty General room is valid until the client sends the first message.
 
-Real-time delivery uses an `IDiscussionEventPublisher` port. SignalR remains outside Application.
+`IDiscussionMessageService` provides:
 
-`IDiscussionRepository` belongs to Discussions and contains its room, message, and first-discussion persistence operations.
+```text
+GetMessagesAsync
+SendMessageAsync
+EditMessageAsync
+DeleteMessageAsync
+```
+
+Message contracts:
+
+```text
+MessageHistoryRequest
+SendMessageRequest
+EditMessageRequest
+DeleteMessageRequest
+DiscussionMessageResponse
+```
+
+Message history uses cursor pagination. Deleted messages remain in history without their content. Message content contains between 1 and 4,000 characters after normalization.
+
+`IDiscussionRepository` provides the persistence operations shared by Rooms and Messages. `GetGeneralRoomByAnimalSourceAsync` resolves an existing discussion by the provider-neutral animal identity. `AddDiscussionAsync` persists the animal and General room atomically.
+
+Creating a discussion requires an active account. Message writes additionally require an open room. A message may be edited or soft-deleted by its author, a moderator, or an administrator.
+
+The Messages-owned `IDiscussionEventPublisher` publishes created, updated, and deleted message events after persistence. SignalR remains outside Application.
 
 ## Transactions and Registration
 
