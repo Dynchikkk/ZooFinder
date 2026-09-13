@@ -12,6 +12,8 @@ public sealed class UserProfileService : IUserProfileService
 
     public UserProfileService(IUserProfileRepository userProfileRepository)
     {
+        ArgumentNullException.ThrowIfNull(userProfileRepository);
+
         _userProfileRepository = userProfileRepository;
     }
 
@@ -59,8 +61,9 @@ public sealed class UserProfileService : IUserProfileService
         Guid userAccountId,
         CancellationToken cancellationToken)
     {
-        UserProfile? userProfile = await _userProfileRepository.GetByUserAccountIdAsync(userAccountId, cancellationToken) 
+        UserProfile userProfile = await _userProfileRepository.GetByUserAccountIdAsync(userAccountId, cancellationToken)
             ?? throw new NotFoundException("User profile was not found.");
+
         return userProfile;
     }
 }

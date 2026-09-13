@@ -10,7 +10,7 @@ ZooFinder is a web platform for animal discovery, image-based animal recognition
 - View animal information, images, and source links.
 - Recognize an animal from an uploaded image.
 - Create and participate in animal-specific discussions.
-- Register by display name and maintain a user session.
+- Register with a login and password, maintain a user session, and edit the public display name.
 
 Animals returned by search are not stored automatically. An animal is added to the local database when its first discussion is created.
 

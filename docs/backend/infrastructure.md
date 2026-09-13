@@ -1,6 +1,6 @@
 # Infrastructure Layer
 
-`ZooFinder.Infrastructure` implements Application ports for persistence, external information, recognition, security, and transactions.
+`ZooFinder.Infrastructure` implements Application ports for persistence, external information, recognition, security, and discussion events.
 
 > **Status:** In progress. This document may change.
 
@@ -24,15 +24,15 @@ ZooFinder.Infrastructure/
 | --- | --- |
 | `IAnimalCatalogRepository` | Entity Framework Core catalog repository |
 | `IDiscussionRepository` | Entity Framework Core discussion repository |
-| `IUserAccountRepository` | Entity Framework Core repository |
 | `IUserProfileRepository` | Entity Framework Core repository |
-| `IUserRefreshSessionRepository` | Entity Framework Core repository |
+| `IAuthRepository` | Entity Framework Core authentication repository |
 | `IAnimalInformationProvider` | MediaWiki provider |
 | `IAnimalRecognitionProvider` | Ollama provider |
 | `IAccessTokenProvider` | JWT provider |
+| `IPasswordHasher` | Password hash implementation |
 | `IRefreshTokenGenerator` | Cryptographic token generator |
 | `IRefreshTokenHasher` | Refresh-token hash implementation |
-| `IUnitOfWork` | Entity Framework Core transaction |
+| `IDiscussionEventPublisher` | SignalR publisher |
 
 ## Persistence
 
@@ -56,9 +56,13 @@ Required database constraints:
 | `DiscussionRoom` | Unique `(AnimalId, Name)` |
 | `UserProfile` | Unique `UserAccountId` |
 | `UserAccount` | Unique non-null `Login` |
-| `UserRefreshSession` | Indexed `UserAccountId` and `RefreshTokenHash` |
+| `UserRefreshSession` | Indexed `UserAccountId`; unique `RefreshTokenHash` |
 
-The first discussion transaction creates the animal when absent, creates its `General` room, and stores the first message.
+`TryAddUserAccountAsync` atomically stores the account, profile, and initial refresh session. A duplicate normalized login returns `false`.
+
+`TryRotateRefreshSessionAsync` uses a conditional update. It succeeds only when the stored hash equals the expected hash and the session is active at the supplied use time.
+
+`GetOrCreateDiscussionAsync` uses the sourced-animal uniqueness constraint to atomically create the animal and its `General` room or return the existing room. Messages are stored by separate operations.
 
 ## MediaWiki
 

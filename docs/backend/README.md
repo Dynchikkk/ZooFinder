@@ -63,12 +63,15 @@ Recognition returns names. The client starts a separate catalog search from the 
 ### Discussion creation
 
 ```text
-First message
-    → resolve animal
-    → create local animal when absent
-    → create General room
-    → create message
-    → commit one transaction
+CreateDiscussion
+    → return existing General room
+    └─ when absent
+       → resolve animal information
+       → atomically create or retrieve the local animal and General room
+
+SendMessage
+    → persist the message
+    → publish the discussion event
 ```
 
 ## Layer Documentation

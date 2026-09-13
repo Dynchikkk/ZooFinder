@@ -34,7 +34,7 @@ public interface IDiscussionRepository
         Guid userAccountId,
         CancellationToken cancellationToken);
 
-    Task AddDiscussionAsync(
+    Task<DiscussionRoom> GetOrCreateDiscussionAsync(
         Animal animal,
         DiscussionRoom generalRoom,
         CancellationToken cancellationToken);

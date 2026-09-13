@@ -61,11 +61,6 @@ public sealed class AuthService : IAuthService
 
         AuthValidator.ValidatePassword(password);
 
-        if (await _authRepository.IsLoginTakenAsync(login, cancellationToken))
-        {
-            throw new ConflictException("Login is already taken.");
-        }
-
         string passwordHash = HashPassword(password);
 
         DateTime currentTime = GetCurrentTime();
@@ -108,7 +103,14 @@ public sealed class AuthService : IAuthService
 
         string accessToken = GenerateAccessToken(userAccount);
 
-        await _authRepository.AddUserAccountAsync(userAccount, cancellationToken);
+        bool wasAdded = await _authRepository.TryAddUserAccountAsync(
+            userAccount,
+            cancellationToken);
+
+        if (!wasAdded)
+        {
+            throw new ConflictException("Login is already taken.");
+        }
 
         return new AuthResponse(
             userAccount.Id,
@@ -188,19 +190,26 @@ public sealed class AuthService : IAuthService
 
         (string newRefreshToken, string newRefreshTokenHash) = GenerateRefreshToken();
         string accessToken = GenerateAccessToken(userAccount);
+        DateTime newExpiresAtUtc = currentTime.Add(_authSettings.RefreshSessionLifetime);
 
-        refreshSession.RefreshTokenHash = newRefreshTokenHash;
-        refreshSession.ExpiresAtUtc = currentTime.Add(_authSettings.RefreshSessionLifetime);
-        refreshSession.LastUsedAtUtc = currentTime;
-        refreshSession.UpdatedAtUtc = currentTime;
+        bool wasRotated = await _authRepository.TryRotateRefreshSessionAsync(
+            refreshSession.Id,
+            currentRefreshTokenHash,
+            newRefreshTokenHash,
+            newExpiresAtUtc,
+            currentTime,
+            cancellationToken);
 
-        await _authRepository.UpdateRefreshSessionAsync(refreshSession, cancellationToken);
+        if (!wasRotated)
+        {
+            throw new UnauthorizedException("Refresh session is no longer active.");
+        }
 
         return new AuthResponse(
             userAccount.Id,
             accessToken,
             newRefreshToken,
-            refreshSession.ExpiresAtUtc);
+            newExpiresAtUtc);
     }
 
     public async Task RevokeSessionAsync(
@@ -223,10 +232,10 @@ public sealed class AuthService : IAuthService
         }
 
         DateTime currentTime = GetCurrentTime();
-        refreshSession.RevokedAtUtc = currentTime;
-        refreshSession.UpdatedAtUtc = currentTime;
-
-        await _authRepository.UpdateRefreshSessionAsync(refreshSession, cancellationToken);
+        await _authRepository.RevokeRefreshSessionAsync(
+            refreshSession.Id,
+            currentTime,
+            cancellationToken);
     }
 
     public Task RevokeAllSessionsAsync(

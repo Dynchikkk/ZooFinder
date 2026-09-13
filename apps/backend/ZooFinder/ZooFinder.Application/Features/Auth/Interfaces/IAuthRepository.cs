@@ -4,15 +4,11 @@ namespace ZooFinder.Application.Features.Auth.Interfaces;
 
 public interface IAuthRepository
 {
-    Task<bool> IsLoginTakenAsync(
-        string login,
-        CancellationToken cancellationToken);
-
     Task<UserAccount?> GetUserAccountByLoginAsync(
         string login,
         CancellationToken cancellationToken);
 
-    Task AddUserAccountAsync(
+    Task<bool> TryAddUserAccountAsync(
         UserAccount userAccount,
         CancellationToken cancellationToken);
 
@@ -24,8 +20,17 @@ public interface IAuthRepository
         string refreshTokenHash,
         CancellationToken cancellationToken);
 
-    Task UpdateRefreshSessionAsync(
-        UserRefreshSession refreshSession,
+    Task<bool> TryRotateRefreshSessionAsync(
+        Guid refreshSessionId,
+        string currentRefreshTokenHash,
+        string newRefreshTokenHash,
+        DateTime expiresAtUtc,
+        DateTime usedAtUtc,
+        CancellationToken cancellationToken);
+
+    Task RevokeRefreshSessionAsync(
+        Guid refreshSessionId,
+        DateTime revokedAtUtc,
         CancellationToken cancellationToken);
 
     Task RevokeAllRefreshSessionsAsync(

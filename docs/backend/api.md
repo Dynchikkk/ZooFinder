@@ -23,7 +23,7 @@ Controllers contain transport logic only. Application services own use-case flow
 | Animals | Search catalog, retrieve animal page |
 | Recognition | Upload image and return recognition suggestion |
 | Users | Retrieve public/current profile, update profile |
-| Auth | Register, refresh, revoke one session, revoke all sessions |
+| Auth | Register, login, refresh, revoke one session, revoke all sessions |
 | Discussions | Retrieve room and history, send, edit, delete message |
 
 ## Requests

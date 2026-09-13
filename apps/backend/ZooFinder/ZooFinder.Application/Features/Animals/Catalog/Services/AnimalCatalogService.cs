@@ -22,6 +22,9 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
         IAnimalInformationProvider animalInformationProvider,
         IAnimalCatalogRepository animalCatalogRepository)
     {
+        ArgumentNullException.ThrowIfNull(animalInformationProvider);
+        ArgumentNullException.ThrowIfNull(animalCatalogRepository);
+
         _animalInformationProvider = animalInformationProvider;
         _animalCatalogRepository = animalCatalogRepository;
     }
@@ -166,5 +169,4 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
                 $"Page size must be between 1 and {PaginationDefaults.MaximumPageSize}.");
         }
     }
-
 }

@@ -15,6 +15,8 @@ public sealed class AnimalRecognitionService : IAnimalRecognitionService
 
     public AnimalRecognitionService(IAnimalRecognitionProvider recognitionProvider)
     {
+        ArgumentNullException.ThrowIfNull(recognitionProvider);
+
         _recognitionProvider = recognitionProvider;
     }
 
@@ -28,7 +30,7 @@ public sealed class AnimalRecognitionService : IAnimalRecognitionService
         string contentType = request.ContentType?.Trim().ToLowerInvariant() ?? string.Empty;
         string languageCode = request.LanguageCode.NormalizeLanguageCode();
 
-        Validate(request.ImageStream, fileName, contentType, request.Length, languageCode);
+        Validate(request.ImageStream, fileName, request.Length, languageCode);
 
         AnimalRecognitionProviderResult result = await _recognitionProvider.RecognizeAsync(
             request.ImageStream,
@@ -56,7 +58,6 @@ public sealed class AnimalRecognitionService : IAnimalRecognitionService
     private static void Validate(
         Stream imageStream,
         string fileName,
-        string contentType,
         long length,
         string languageCode)
     {
@@ -70,8 +71,6 @@ public sealed class AnimalRecognitionService : IAnimalRecognitionService
             throw new RequestValidationException(
                 $"File name length must be between 1 and {MaximumFileNameLength} characters.");
         }
-
-        // TODO: Validate the actual file type. The declared content type is not verified yet.
 
         if (length < 1 || length > MaximumImageLength)
         {

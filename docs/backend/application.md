@@ -187,7 +187,7 @@ Provider result and service response are separate contracts. Candidate records a
 
 Recognition validates the stream, file name, declared length, language, and provider result.
 
-> **Status:** File-format validation is in progress and may change. It must inspect the file contents instead of trusting the declared content type.
+File-format validation belongs to the API upload boundary and inspects the file contents instead of trusting the declared content type.
 
 Recognition does not call Catalog and does not persist the image. The client uses the returned name in a separate catalog search.
 
@@ -252,20 +252,20 @@ IRefreshTokenHasher
 `IAuthRepository` provides:
 
 ```text
-IsLoginTakenAsync
 GetUserAccountByLoginAsync
-AddUserAccountAsync
+TryAddUserAccountAsync
 AddRefreshSessionAsync
 GetRefreshSessionWithUserAccountByTokenHashAsync
-UpdateRefreshSessionAsync
+TryRotateRefreshSessionAsync
+RevokeRefreshSessionAsync
 RevokeAllRefreshSessionsAsync
 ```
 
-Registration accepts a login and password. It creates an active account with the `User` role, a profile, and the first refresh session. The initial display name equals the normalized login and may later be changed through Users. Logins are normalized to lowercase and must be unique. Passwords are passed to `IPasswordHasher`; only the resulting hash is persisted.
+Registration accepts a login and password. It creates an active account with the `User` role, a profile, and the first refresh session. The initial display name equals the normalized login and may later be changed through Users. Logins are normalized to lowercase and must be unique. `TryAddUserAccountAsync` atomically persists the account graph and returns `false` when the normalized login already exists. Passwords are passed to `IPasswordHasher`; only the resulting hash is persisted.
 
 Login verifies the password hash and creates a separate refresh session. Invalid credentials and inactive accounts produce the same authentication error.
 
-Only a refresh-token hash is persisted. Refreshing a session validates the session and account, replaces the token hash, extends the expiration time, and records the last-use time. A user may revoke one session by refresh token or all sessions by account ID.
+Only a refresh-token hash is persisted. Refreshing a session validates the session and account, then `TryRotateRefreshSessionAsync` atomically replaces the expected current token hash, extends the expiration time, and records the last-use time. It returns `false` when the session changed or became inactive before the update. A user may revoke one session by refresh token or all sessions by account ID.
 
 `AuthSettings.RefreshSessionLifetime` defines the refresh-session lifetime. `TimeProvider` supplies the current UTC time.
 
@@ -301,7 +301,7 @@ CreateDiscussionAsync
 
 `GetGeneralRoomAsync` returns the persisted animal's General room or `null` when no discussion exists.
 
-`CreateDiscussionAsync` is idempotent by sourced-animal identity. It returns an existing General room or obtains current animal information and creates the local animal and room through one repository operation. An empty General room is valid until the client sends the first message.
+`CreateDiscussionAsync` is idempotent by sourced-animal identity. It returns an existing General room or obtains current animal information and passes a new animal and room to `GetOrCreateDiscussionAsync`. The repository atomically creates them when absent or returns the concurrently created General room. An empty General room is valid until the client sends the first message.
 
 `IDiscussionMessageService` provides:
 
@@ -324,16 +324,14 @@ DiscussionMessageResponse
 
 Message history uses cursor pagination. Deleted messages remain in history without their content. Message content contains between 1 and 4,000 characters after normalization.
 
-`IDiscussionRepository` provides the persistence operations shared by Rooms and Messages. `GetGeneralRoomByAnimalSourceAsync` resolves an existing discussion by the provider-neutral animal identity. `AddDiscussionAsync` persists the animal and General room atomically.
+`IDiscussionRepository` provides the persistence operations shared by Rooms and Messages. `GetGeneralRoomByAnimalSourceAsync` resolves an existing discussion by the provider-neutral animal identity. `GetOrCreateDiscussionAsync` atomically persists the animal and General room or returns the existing General room for the same sourced-animal identity.
 
 Creating a discussion requires an active account. Message writes additionally require an open room. A message may be edited or soft-deleted by its author, a moderator, or an administrator.
 
-The Messages-owned `IDiscussionEventPublisher` publishes created, updated, and deleted message events after persistence. SignalR remains outside Application.
+The Messages-owned `IDiscussionEventPublisher` publishes created, updated, and deleted message events after persistence. Message persistence and event publication are separate operations. SignalR remains outside Application.
 
-## Transactions and Registration
+## Composition
 
-> **Status:** In progress. This section may change.
+Application does not depend on a dependency-injection framework. The API composition root registers Application services together with the Infrastructure implementations of their ports.
 
-`IUnitOfWork` defines the transaction boundary for multi-entity operations.
-
-`DependencyInjection.cs` registers Application services. Infrastructure registers repository, provider, security, and transaction implementations.
+Use-case-specific repository methods define required atomic operations. Application does not expose a general-purpose unit-of-work abstraction.

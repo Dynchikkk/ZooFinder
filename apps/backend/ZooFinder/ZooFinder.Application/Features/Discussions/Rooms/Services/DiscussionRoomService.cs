@@ -133,17 +133,23 @@ public sealed class DiscussionRoomService : IDiscussionRoomService
 
         animal.DiscussionRooms.Add(generalRoom);
 
-        await _discussionRepository.AddDiscussionAsync(
+        DiscussionRoom persistedRoom = await _discussionRepository.GetOrCreateDiscussionAsync(
             animal,
             generalRoom,
             cancellationToken);
 
+        if (persistedRoom.IsDeleted)
+        {
+            throw new InvalidOperationException(
+                "A sourced animal has a deleted General discussion room.");
+        }
+
         return new DiscussionRoomResponse(
-            generalRoom.Id,
-            animal.Id,
-            generalRoom.Type,
-            generalRoom.Name,
-            generalRoom.Description,
-            generalRoom.IsClosed);
+            persistedRoom.Id,
+            persistedRoom.AnimalId,
+            persistedRoom.Type,
+            persistedRoom.Name,
+            persistedRoom.Description,
+            persistedRoom.IsClosed);
     }
 }
