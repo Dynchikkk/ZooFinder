@@ -45,3 +45,5 @@ ZooFinder/
 ```powershell
 dotnet build apps/backend/ZooFinder/ZooFinder.slnx
 ```
+
+Database configuration and migrations are documented in [Infrastructure](docs/backend/infrastructure.md#connection-and-migrations).
