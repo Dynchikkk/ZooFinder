@@ -59,9 +59,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
         };
     }
 
-    public async Task<AnimalPageResponse> GetAnimalAsync(
-        AnimalPageRequest request,
-        CancellationToken cancellationToken)
+    public async Task<AnimalPageResponse> GetAnimalAsync(AnimalPageRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -69,10 +67,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
         string sourceItemId = request.SourceItemId.NormalizeSourceItemId();
         string languageCode = request.LanguageCode.NormalizeLanguageCode();
 
-        AnimalInformationValidator.ValidateIdentity(
-            informationSource,
-            sourceItemId,
-            languageCode);
+        AnimalInformationValidator.ValidateIdentity(informationSource, sourceItemId, languageCode);
 
         var information = await _animalInformationProvider.GetDetailsAsync(
             informationSource,
@@ -105,11 +100,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
         CursorPageRequest pageRequest,
         CancellationToken cancellationToken)
     {
-        var page = await _animalCatalogDataSource.SearchAsync(
-            searchTerm,
-            languageCode,
-            pageRequest,
-            cancellationToken);
+        var page = await _animalCatalogDataSource.SearchAsync(searchTerm, languageCode, pageRequest, cancellationToken);
 
         AnimalCardResponse[] items = page.Items
             .Select(animal => new AnimalCardResponse(
@@ -131,11 +122,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
         CursorPageRequest pageRequest,
         CancellationToken cancellationToken)
     {
-        var page = await _animalInformationProvider.SearchAsync(
-            searchTerm,
-            languageCode,
-            pageRequest,
-            cancellationToken);
+        var page = await _animalInformationProvider.SearchAsync(searchTerm, languageCode, pageRequest, cancellationToken);
 
         AnimalCardResponse[] items = page.Items
             .Select(result => new AnimalCardResponse(
@@ -151,10 +138,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
         return new CursorPageResponse<AnimalCardResponse>(items, page.NextCursor);
     }
 
-    private static void ValidateSearchRequest(
-        string searchTerm,
-        string languageCode,
-        int limit)
+    private static void ValidateSearchRequest(string searchTerm, string languageCode, int limit)
     {
         if (searchTerm.Length < MinimumSearchTermLength || searchTerm.Length > MaximumSearchTermLength)
         {
@@ -166,8 +150,7 @@ public sealed class AnimalCatalogService : IAnimalCatalogService
 
         if (limit < 1 || limit > PaginationDefaults.MaximumPageSize)
         {
-            throw new RequestValidationException(
-                $"Page size must be between 1 and {PaginationDefaults.MaximumPageSize}.");
+            throw new RequestValidationException($"Page size must be between 1 and {PaginationDefaults.MaximumPageSize}.");
         }
     }
 }

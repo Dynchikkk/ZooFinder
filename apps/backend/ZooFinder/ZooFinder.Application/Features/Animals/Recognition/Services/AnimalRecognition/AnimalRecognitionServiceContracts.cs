@@ -12,11 +12,17 @@ public sealed record AnimalRecognitionRequest(
     Guid? ParkId = null);
 
 public sealed record AnimalRecognitionResponse(
-    AnimalRecognitionStatus Status, string? CommonName, string? ScientificName,
-    IReadOnlyList<AnimalRecognitionCandidateResponse> Alternatives, Guid? ParkAnimalId = null,
+    AnimalRecognitionStatus Status,
+    string? CommonName,
+    string? ScientificName,
+    IReadOnlyList<AnimalRecognitionCandidateResponse> Alternatives,
+    Guid? ParkAnimalId = null,
     AnimalRecognitionExecutionResult? Execution = null)
 {
     public bool IsRecognized => Status == AnimalRecognitionStatus.Recognized;
 }
 
-public sealed record AnimalRecognitionCandidateResponse(string? CommonName, string? ScientificName, Guid? ParkAnimalId = null);
+public sealed record AnimalRecognitionCandidateResponse(
+    string? CommonName,
+    string? ScientificName,
+    Guid? ParkAnimalId = null);

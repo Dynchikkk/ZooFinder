@@ -13,9 +13,7 @@ public sealed class DiscussionDataSource : IDiscussionDataSource
     private readonly ZooFinderDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
 
-    public DiscussionDataSource(
-        ZooFinderDbContext dbContext,
-        TimeProvider timeProvider)
+    public DiscussionDataSource(ZooFinderDbContext dbContext, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -30,26 +28,26 @@ public sealed class DiscussionDataSource : IDiscussionDataSource
         string languageCode,
         CancellationToken cancellationToken)
     {
-        return _dbContext.DiscussionRooms.AsNoTracking().SingleOrDefaultAsync(room =>
-            room.Type == DiscussionRoomType.General &&
-            room.Animal.InformationSource == informationSource &&
-            room.Animal.SourceItemId == sourceItemId &&
-            room.Animal.LanguageCode == languageCode, cancellationToken);
+        return _dbContext.DiscussionRooms
+            .AsNoTracking()
+            .SingleOrDefaultAsync(room =>
+                room.Type == DiscussionRoomType.General && room.Animal.InformationSource == informationSource &&
+                room.Animal.SourceItemId == sourceItemId &&
+                room.Animal.LanguageCode == languageCode, cancellationToken);
     }
 
-    public Task<DiscussionRoom?> GetGeneralRoomByAnimalIdAsync(
-        Guid animalId,
-        CancellationToken cancellationToken)
+    public Task<DiscussionRoom?> GetGeneralRoomByAnimalIdAsync(Guid animalId, CancellationToken cancellationToken)
     {
-        return _dbContext.DiscussionRooms.AsNoTracking().SingleOrDefaultAsync(
+        return _dbContext.DiscussionRooms
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
             room => room.AnimalId == animalId && room.Type == DiscussionRoomType.General, cancellationToken);
     }
 
-    public Task<DiscussionRoom?> GetRoomByIdAsync(
-        Guid discussionRoomId,
-        CancellationToken cancellationToken)
+    public Task<DiscussionRoom?> GetRoomByIdAsync(Guid discussionRoomId, CancellationToken cancellationToken)
     {
-        return _dbContext.DiscussionRooms.AsNoTracking()
+        return _dbContext.DiscussionRooms
+            .AsNoTracking()
             .SingleOrDefaultAsync(room => room.Id == discussionRoomId, cancellationToken);
     }
 
@@ -67,8 +65,10 @@ public sealed class DiscussionDataSource : IDiscussionDataSource
                 (message.CreatedAtUtc == cursor.CreatedAtUtc && message.Id.CompareTo(cursor.Id) < 0));
         }
 
-        var items = await query.OrderByDescending(message => message.CreatedAtUtc)
-            .ThenByDescending(message => message.Id).Take(pageRequest.Limit + 1)
+        var items = await query
+            .OrderByDescending(message => message.CreatedAtUtc)
+            .ThenByDescending(message => message.Id)
+            .Take(pageRequest.Limit + 1)
             .ToListAsync(cancellationToken);
         bool hasMore = items.Count > pageRequest.Limit;
         if (hasMore)
@@ -85,35 +85,31 @@ public sealed class DiscussionDataSource : IDiscussionDataSource
         Guid discussionMessageId,
         CancellationToken cancellationToken)
     {
-        return HistoryQuery().Include(message => message.DiscussionRoom)
+        return HistoryQuery()
+            .Include(message => message.DiscussionRoom)
             .SingleOrDefaultAsync(message => message.Id == discussionMessageId, cancellationToken);
     }
 
-    public Task<UserAccount?> GetUserAccountWithProfileByIdAsync(
-        Guid userAccountId,
-        CancellationToken cancellationToken)
+    public Task<UserAccount?> GetUserAccountWithProfileByIdAsync(Guid userAccountId, CancellationToken cancellationToken)
     {
-        return _dbContext.UserAccounts.AsNoTracking().Include(account => account.UserProfile)
+        return _dbContext.UserAccounts
+            .AsNoTracking()
+            .Include(account => account.UserProfile)
             .SingleOrDefaultAsync(account => account.Id == userAccountId, cancellationToken);
     }
 
-
-    public async Task AddMessageAsync(
-        DiscussionMessage discussionMessage,
-        CancellationToken cancellationToken)
+    public async Task AddMessageAsync(DiscussionMessage discussionMessage, CancellationToken cancellationToken)
     {
         // Only the message is new; room and author were read without tracking.
         _dbContext.Entry(discussionMessage).State = EntityState.Added;
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateMessageAsync(
-        DiscussionMessage discussionMessage,
-        CancellationToken cancellationToken)
+    public async Task UpdateMessageAsync(DiscussionMessage discussionMessage, CancellationToken cancellationToken)
     {
         DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
-        var query = _dbContext.DiscussionMessages.Where(message =>
-            message.Id == discussionMessage.Id && !message.DiscussionRoom.IsClosed);
+        var query = _dbContext.DiscussionMessages
+            .Where(message => message.Id == discussionMessage.Id && !message.DiscussionRoom.IsClosed);
 
         int count;
         if (discussionMessage.IsDeleted)
@@ -125,10 +121,12 @@ public sealed class DiscussionDataSource : IDiscussionDataSource
         }
         else
         {
-            count = await query.ExecuteUpdateAsync(setters => setters
-                .SetProperty(message => message.Content, discussionMessage.Content)
-                .SetProperty(message => message.EditedAtUtc, discussionMessage.EditedAtUtc)
-                .SetProperty(message => message.UpdatedAtUtc, now), cancellationToken);
+            count = await query.ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(message => message.Content, discussionMessage.Content)
+                    .SetProperty(message => message.EditedAtUtc, discussionMessage.EditedAtUtc)
+                    .SetProperty(message => message.UpdatedAtUtc, now),
+                cancellationToken);
         }
 
         if (count == 0)
@@ -143,8 +141,11 @@ public sealed class DiscussionDataSource : IDiscussionDataSource
     {
         // History retains tombstones and authors even after soft deletion.
         // Reapply room/animal visibility explicitly after disabling global filters.
-        return _dbContext.DiscussionMessages.IgnoreQueryFilters().AsNoTracking()
+        return _dbContext.DiscussionMessages
+            .IgnoreQueryFilters()
+            .AsNoTracking()
             .Where(message => !message.DiscussionRoom.IsDeleted && !message.DiscussionRoom.Animal.IsDeleted)
-            .Include(message => message.AuthorUserAccount).ThenInclude(account => account.UserProfile);
+            .Include(message => message.AuthorUserAccount)
+            .ThenInclude(account => account.UserProfile);
     }
 }

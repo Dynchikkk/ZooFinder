@@ -12,8 +12,7 @@ public static class AuthValidator
     {
         if (login.Length == 0 || login.Length > MaximumLoginLength)
         {
-            throw new RequestValidationException(
-                $"Login length must be between 1 and {MaximumLoginLength} characters.");
+            throw new RequestValidationException($"Login length must be between 1 and {MaximumLoginLength} characters.");
         }
     }
 
@@ -21,8 +20,7 @@ public static class AuthValidator
     {
         if (password.Length == 0 || password.Length > MaximumPasswordLength)
         {
-            throw new RequestValidationException(
-                $"Password length must be between 1 and {MaximumPasswordLength} characters.");
+            throw new RequestValidationException($"Password length must be between 1 and {MaximumPasswordLength} characters.");
         }
     }
 

@@ -39,9 +39,7 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         DiscussionMessageValidator.ValidateDiscussionRoomId(request.DiscussionRoomId);
         DiscussionMessageValidator.ValidatePageSize(request.Limit);
 
-        DiscussionRoom room = await _discussionDataSource.GetRoomByIdAsync(
-            request.DiscussionRoomId,
-            cancellationToken)
+        DiscussionRoom room = await _discussionDataSource.GetRoomByIdAsync(request.DiscussionRoomId, cancellationToken)
             ?? throw new NotFoundException("Discussion room was not found.");
 
         if (room.IsDeleted)
@@ -49,22 +47,16 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
             throw new NotFoundException("Discussion room was not found.");
         }
 
-        var pageRequest = new CursorPageRequest(
-            request.Cursor.NormalizeCursor(),
-            request.Limit);
+        var pageRequest = new CursorPageRequest(request.Cursor.NormalizeCursor(), request.Limit);
 
-        var page = await _discussionDataSource.GetMessagesWithAuthorProfilesAsync(
-            room.Id,
-            pageRequest,
-            cancellationToken);
+        var page = await _discussionDataSource.GetMessagesWithAuthorProfilesAsync(room.Id, pageRequest, cancellationToken);
 
         var messages = new List<DiscussionMessageResponse>(page.Items.Count);
 
         foreach (DiscussionMessage message in page.Items)
         {
             UserProfile authorProfile = message.AuthorUserAccount?.UserProfile
-                ?? throw new InvalidOperationException(
-                    "Discussion message was loaded without its author profile.");
+                ?? throw new InvalidOperationException("Discussion message was loaded without its author profile.");
 
             messages.Add(new DiscussionMessageResponse(
                 message.Id,
@@ -79,9 +71,7 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
                 message.DeletedAtUtc));
         }
 
-        return new CursorPageResponse<DiscussionMessageResponse>(
-            messages,
-            page.NextCursor);
+        return new CursorPageResponse<DiscussionMessageResponse>(messages, page.NextCursor);
     }
 
     public async Task<DiscussionMessageResponse> SendMessageAsync(
@@ -97,22 +87,14 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         string content = request.Content?.Trim() ?? string.Empty;
         DiscussionMessageValidator.ValidateContent(content);
 
-        UserAccount author = await GetActiveUserAccountAsync(
-            currentUserAccountId,
-            cancellationToken);
+        UserAccount author = await GetActiveUserAccountAsync(currentUserAccountId, cancellationToken);
 
-        DiscussionRoom room = await _discussionDataSource.GetRoomByIdAsync(
-            request.DiscussionRoomId,
-            cancellationToken)
+        DiscussionRoom room = await _discussionDataSource.GetRoomByIdAsync(request.DiscussionRoomId, cancellationToken)
             ?? throw new NotFoundException("Discussion room was not found.");
 
         DiscussionMessageValidator.ValidateRoomWritable(room);
 
-        return await AddMessageAsync(
-            room,
-            author,
-            content,
-            cancellationToken);
+        return await AddMessageAsync(room, author, content, cancellationToken);
     }
 
     public async Task<DiscussionMessageResponse> EditMessageAsync(
@@ -128,14 +110,10 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         string content = request.Content?.Trim() ?? string.Empty;
         DiscussionMessageValidator.ValidateContent(content);
 
-        UserAccount currentUser = await GetActiveUserAccountAsync(
-            currentUserAccountId,
-            cancellationToken);
+        UserAccount currentUser = await GetActiveUserAccountAsync(currentUserAccountId, cancellationToken);
 
         DiscussionMessage message = await _discussionDataSource
-            .GetMessageWithRoomAndAuthorProfileByIdAsync(
-                request.DiscussionMessageId,
-                cancellationToken)
+            .GetMessageWithRoomAndAuthorProfileByIdAsync(request.DiscussionMessageId, cancellationToken)
             ?? throw new NotFoundException("Discussion message was not found.");
 
         if (message.IsDeleted)
@@ -144,12 +122,10 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         }
 
         DiscussionRoom room = message.DiscussionRoom
-            ?? throw new InvalidOperationException(
-                "Discussion message was loaded without its discussion room.");
+            ?? throw new InvalidOperationException("Discussion message was loaded without its discussion room.");
 
         UserProfile authorProfile = message.AuthorUserAccount?.UserProfile
-            ?? throw new InvalidOperationException(
-                "Discussion message was loaded without its author profile.");
+            ?? throw new InvalidOperationException("Discussion message was loaded without its author profile.");
 
         DiscussionMessageValidator.ValidateRoomWritable(room);
         DiscussionMessageValidator.ValidateMessagePermission(message, currentUser);
@@ -173,9 +149,7 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
             message.EditedAtUtc,
             null);
 
-        await _discussionEventPublisher.PublishMessageUpdatedAsync(
-            ToEvent(response),
-            cancellationToken);
+        await _discussionEventPublisher.PublishMessageUpdatedAsync(ToEvent(response), cancellationToken);
 
         return response;
     }
@@ -190,14 +164,10 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         DiscussionUserValidator.ValidateUserAccountId(currentUserAccountId);
         DiscussionMessageValidator.ValidateDiscussionMessageId(request.DiscussionMessageId);
 
-        UserAccount currentUser = await GetActiveUserAccountAsync(
-            currentUserAccountId,
-            cancellationToken);
+        UserAccount currentUser = await GetActiveUserAccountAsync(currentUserAccountId, cancellationToken);
 
         DiscussionMessage message = await _discussionDataSource
-            .GetMessageWithRoomAndAuthorProfileByIdAsync(
-                request.DiscussionMessageId,
-                cancellationToken)
+            .GetMessageWithRoomAndAuthorProfileByIdAsync(request.DiscussionMessageId, cancellationToken)
             ?? throw new NotFoundException("Discussion message was not found.");
 
         if (message.IsDeleted)
@@ -206,8 +176,7 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         }
 
         DiscussionRoom room = message.DiscussionRoom
-            ?? throw new InvalidOperationException(
-                "Discussion message was loaded without its discussion room.");
+            ?? throw new InvalidOperationException("Discussion message was loaded without its discussion room.");
 
         DiscussionMessageValidator.ValidateRoomWritable(room);
         DiscussionMessageValidator.ValidateMessagePermission(message, currentUser);
@@ -260,26 +229,19 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
             null,
             null);
 
-        await _discussionEventPublisher.PublishMessageCreatedAsync(
-            ToEvent(response),
-            cancellationToken);
+        await _discussionEventPublisher.PublishMessageCreatedAsync(ToEvent(response), cancellationToken);
 
         return response;
     }
 
-    private async Task<UserAccount> GetActiveUserAccountAsync(
-        Guid userAccountId,
-        CancellationToken cancellationToken)
+    private async Task<UserAccount> GetActiveUserAccountAsync(Guid userAccountId, CancellationToken cancellationToken)
     {
-        UserAccount userAccount = await _discussionDataSource.GetUserAccountWithProfileByIdAsync(
-            userAccountId,
-            cancellationToken)
+        UserAccount userAccount = await _discussionDataSource.GetUserAccountWithProfileByIdAsync(userAccountId, cancellationToken)
             ?? throw new UnauthorizedException("User account was not found.");
 
         DiscussionUserValidator.ValidateUserCanWrite(userAccount);
 
-        _ = userAccount.UserProfile
-            ?? throw new InvalidOperationException("User account was loaded without its profile.");
+        _ = userAccount.UserProfile ?? throw new InvalidOperationException("User account was loaded without its profile.");
 
         return userAccount;
     }

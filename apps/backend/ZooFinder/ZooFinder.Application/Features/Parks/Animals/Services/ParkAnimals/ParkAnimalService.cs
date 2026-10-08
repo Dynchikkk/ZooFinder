@@ -18,14 +18,20 @@ public sealed class ParkAnimalService : IParkAnimalService
     private readonly IAnimalRegistrationService _registration;
     private readonly IAnimalInformationProvider _information;
 
-    public ParkAnimalService(IParkCatalogDataSource parks, IParkAnimalDataSource parkAnimals,
-        IAnimalRegistrationService registration, IAnimalInformationProvider information)
+    public ParkAnimalService(
+        IParkCatalogDataSource parks,
+        IParkAnimalDataSource parkAnimals,
+        IAnimalRegistrationService registration,
+        IAnimalInformationProvider information)
     {
         ArgumentNullException.ThrowIfNull(parks);
         ArgumentNullException.ThrowIfNull(parkAnimals);
         ArgumentNullException.ThrowIfNull(registration);
         ArgumentNullException.ThrowIfNull(information);
-        _parks = parks; _parkAnimals = parkAnimals; _registration = registration; _information = information;
+        _parks = parks;
+        _parkAnimals = parkAnimals;
+        _registration = registration;
+        _information = information;
     }
 
     public async Task<ParkAnimalResponse> GetAsync(Guid parkAnimalId, CancellationToken cancellationToken)
@@ -53,18 +59,21 @@ public sealed class ParkAnimalService : IParkAnimalService
     }
 
     public async Task<OffsetPageResponse<ParkAnimalResponse>> SearchAsync(
-        ParkAnimalSearchRequest request, CancellationToken cancellationToken)
+        ParkAnimalSearchRequest request,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         await ValidateParkAsync(request.ParkId, cancellationToken);
         ParkValidator.ValidatePage(request.Page, request.PageSize);
         var page = await _parkAnimals.SearchAsync(request.ParkId, request.IncludeUnpublished,
             new OffsetPageRequest(request.Page, request.PageSize), cancellationToken);
-        return new OffsetPageResponse<ParkAnimalResponse>(page.Items.Select(link =>
-            new ParkAnimalResponse(link.Id, link.ParkId, link.AnimalId, link.Animal.Title,
-                link.Animal.ScientificName, link.Animal.ShortDescription, link.Animal.ImageUrl,
-                null, link.LocalDescription, link.IsPublished, link.Animal.InformationSource,
-                link.Animal.SourceItemId, link.Animal.LanguageCode)).ToArray(), page.Page, page.PageSize, page.TotalCount);
+        return new OffsetPageResponse<ParkAnimalResponse>(page.Items
+            .Select(link =>
+                new ParkAnimalResponse(link.Id, link.ParkId, link.AnimalId, link.Animal.Title,
+                    link.Animal.ScientificName, link.Animal.ShortDescription, link.Animal.ImageUrl,
+                    null, link.LocalDescription, link.IsPublished, link.Animal.InformationSource,
+                    link.Animal.SourceItemId, link.Animal.LanguageCode))
+            .ToArray(), page.Page, page.PageSize, page.TotalCount);
     }
 
     public async Task<ParkAnimalResponse> AddAsync(AddParkAnimalRequest request, CancellationToken cancellationToken)
@@ -76,9 +85,13 @@ public sealed class ParkAnimalService : IParkAnimalService
             request.InformationSource, request.SourceItemId, request.LanguageCode), cancellationToken);
         var link = await _parkAnimals.UpsertAsync(new ParkAnimal
         {
-            Id = Guid.NewGuid(), ParkId = request.ParkId, AnimalId = registration.AnimalId,
-            LocalDescription = description, IsPublished = request.IsPublished
+            Id = Guid.NewGuid(),
+            ParkId = request.ParkId,
+            AnimalId = registration.AnimalId,
+            LocalDescription = description,
+            IsPublished = request.IsPublished
         }, cancellationToken);
+
         return new ParkAnimalResponse(link.Id, link.ParkId, link.AnimalId, link.Animal.Title,
             link.Animal.ScientificName, link.Animal.ShortDescription, link.Animal.ImageUrl,
             null, link.LocalDescription, link.IsPublished, link.Animal.InformationSource,
@@ -92,7 +105,8 @@ public sealed class ParkAnimalService : IParkAnimalService
         string? description = ParkAnimalValidator.NormalizeDescription(request.LocalDescription);
         var link = await _parkAnimals.GetAsync(request.ParkAnimalId, cancellationToken)
             ?? throw new NotFoundException("Park animal was not found.");
-        link.LocalDescription = description; link.IsPublished = request.IsPublished;
+        link.LocalDescription = description;
+        link.IsPublished = request.IsPublished;
         await _parkAnimals.UpdateAsync(link, cancellationToken);
         return new ParkAnimalResponse(link.Id, link.ParkId, link.AnimalId, link.Animal.Title,
             link.Animal.ScientificName, link.Animal.ShortDescription, link.Animal.ImageUrl,

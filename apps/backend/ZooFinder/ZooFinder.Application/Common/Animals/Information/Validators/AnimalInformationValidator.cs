@@ -6,10 +6,7 @@ namespace ZooFinder.Application.Common.Animals.Information.Validators;
 
 public static class AnimalInformationValidator
 {
-    public static void ValidateIdentity(
-        string informationSource,
-        string sourceItemId,
-        string languageCode)
+    public static void ValidateIdentity(string informationSource, string sourceItemId, string languageCode)
     {
         if (informationSource.Length == 0 ||
             informationSource.Length > AnimalInformationConstraints.MaximumInformationSourceLength)
@@ -19,8 +16,7 @@ public static class AnimalInformationValidator
                 $"{AnimalInformationConstraints.MaximumInformationSourceLength} characters.");
         }
 
-        if (sourceItemId.Length == 0 ||
-            sourceItemId.Length > AnimalInformationConstraints.MaximumSourceItemIdLength)
+        if (sourceItemId.Length == 0 || sourceItemId.Length > AnimalInformationConstraints.MaximumSourceItemIdLength)
         {
             throw new RequestValidationException(
                 $"Source item ID length must be between 1 and " +

@@ -23,9 +23,7 @@ public sealed class ZooFinderDbContext : DbContext
 
     private readonly TimeProvider _timeProvider;
 
-    public ZooFinderDbContext(
-        DbContextOptions<ZooFinderDbContext> options,
-        TimeProvider timeProvider) : base(options)
+    public ZooFinderDbContext(DbContextOptions<ZooFinderDbContext> options, TimeProvider timeProvider) : base(options)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
 
@@ -46,7 +44,7 @@ public sealed class ZooFinderDbContext : DbContext
 
         // Store UTC values and restore their DateTime.Kind when reading.
         var utcConverter = new ValueConverter<DateTime, DateTime>(
-            value => value.ToUniversalTime(), 
+            value => value.ToUniversalTime(),
             value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
         var nullableDateTimeConverter = new ValueConverter<DateTime?, DateTime?>(
             v => v.HasValue ? v.Value.ToUniversalTime() : v,
@@ -90,11 +88,9 @@ public sealed class ZooFinderDbContext : DbContext
         ChangeTracker.DetectChanges();
         DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var entries = ChangeTracker
-            .Entries<IdEntity<Guid>>()
-            .Where(entry => entry.State == EntityState.Added ||
-                            entry.State == EntityState.Modified ||
-                            entry.State == EntityState.Deleted)
+        var entries = ChangeTracker.Entries<IdEntity<Guid>>()
+            .Where(entry => entry.State == EntityState.Added || entry.State == EntityState.Modified ||
+                entry.State == EntityState.Deleted)
             .ToArray();
 
         foreach (var entry in entries)

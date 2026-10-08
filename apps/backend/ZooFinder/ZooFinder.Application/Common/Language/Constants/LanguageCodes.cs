@@ -8,6 +8,6 @@ public static class LanguageCodes
     public static bool IsSupported(string? languageCode)
     {
         return string.Equals(languageCode, English, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(languageCode, Russian, StringComparison.OrdinalIgnoreCase);
+            string.Equals(languageCode, Russian, StringComparison.OrdinalIgnoreCase);
     }
 }

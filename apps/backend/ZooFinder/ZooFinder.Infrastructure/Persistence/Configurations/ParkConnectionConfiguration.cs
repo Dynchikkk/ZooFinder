@@ -17,8 +17,7 @@ internal sealed class ParkConnectionConfiguration : IEntityTypeConfiguration<Par
         builder.Property(request => request.Currency).HasMaxLength(3);
         builder.Property(request => request.AgreedAmount).HasPrecision(17, 2);
         builder.HasIndex(request => new { request.ParkId, request.Status });
-        builder.HasIndex(request => request.ParkId).IsUnique()
-            .HasFilter("[IsDeleted] = 0 AND [Status] IN (1, 2)");
+        builder.HasIndex(request => request.ParkId).IsUnique().HasFilter("[IsDeleted] = 0 AND [Status] IN (1, 2)");
         builder.HasOne(request => request.Park).WithMany(park => park.ConnectionRequests)
             .HasForeignKey(request => request.ParkId).OnDelete(DeleteBehavior.ClientNoAction);
         builder.HasQueryFilter(request => !request.IsDeleted && !request.Park.IsDeleted);

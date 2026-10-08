@@ -16,19 +16,12 @@ public sealed class UserProfileService : IUserProfileService
         _userProfileDataSource = userProfileDataSource;
     }
 
-    public async Task<UserProfileResponse> GetProfileAsync(
-        Guid userAccountId,
-        CancellationToken cancellationToken)
+    public async Task<UserProfileResponse> GetProfileAsync(Guid userAccountId, CancellationToken cancellationToken)
     {
         UserProfileValidator.ValidateUserAccountId(userAccountId);
 
-        UserProfile userProfile = await GetUserProfileAsync(
-            userAccountId,
-            cancellationToken);
-
-        return new UserProfileResponse(
-            userProfile.UserAccountId,
-            userProfile.DisplayName);
+        UserProfile userProfile = await GetUserProfileAsync(userAccountId, cancellationToken);
+        return new UserProfileResponse(userProfile.UserAccountId, userProfile.DisplayName);
     }
 
     public async Task<UserProfileResponse> UpdateProfileAsync(
@@ -43,22 +36,14 @@ public sealed class UserProfileService : IUserProfileService
         string displayName = request.DisplayName?.Trim() ?? string.Empty;
         UserProfileValidator.ValidateDisplayName(displayName);
 
-        UserProfile userProfile = await GetUserProfileAsync(
-            currentUserAccountId,
-            cancellationToken);
-
+        UserProfile userProfile = await GetUserProfileAsync(currentUserAccountId, cancellationToken);
         userProfile.DisplayName = displayName;
-
         await _userProfileDataSource.UpdateAsync(userProfile, cancellationToken);
 
-        return new UserProfileResponse(
-            userProfile.UserAccountId,
-            userProfile.DisplayName);
+        return new UserProfileResponse(userProfile.UserAccountId, userProfile.DisplayName);
     }
 
-    private async Task<UserProfile> GetUserProfileAsync(
-        Guid userAccountId,
-        CancellationToken cancellationToken)
+    private async Task<UserProfile> GetUserProfileAsync(Guid userAccountId, CancellationToken cancellationToken)
     {
         UserProfile userProfile = await _userProfileDataSource.GetByUserAccountIdAsync(userAccountId, cancellationToken)
             ?? throw new NotFoundException("User profile was not found.");

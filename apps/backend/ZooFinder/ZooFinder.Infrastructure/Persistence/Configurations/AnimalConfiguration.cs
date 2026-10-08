@@ -13,11 +13,9 @@ internal sealed class AnimalConfiguration : IEntityTypeConfiguration<Animal>
         builder.ConfigureBase();
         builder.Property(animal => animal.InformationSource)
             .HasMaxLength(AnimalInformationConstraints.MaximumInformationSourceLength);
-        builder.Property(animal => animal.SourceItemId)
-            .HasMaxLength(AnimalInformationConstraints.MaximumSourceItemIdLength);
+        builder.Property(animal => animal.SourceItemId).HasMaxLength(AnimalInformationConstraints.MaximumSourceItemIdLength);
         builder.Property(animal => animal.LanguageCode).HasMaxLength(2);
-        builder.HasIndex(animal => new { animal.InformationSource, animal.LanguageCode, animal.SourceItemId })
-            .IsUnique();
+        builder.HasIndex(animal => new { animal.InformationSource, animal.LanguageCode, animal.SourceItemId }).IsUnique();
         builder.HasIndex(animal => new { animal.LanguageCode, animal.CreatedAtUtc, animal.Id });
     }
 }

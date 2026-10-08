@@ -5,8 +5,10 @@ namespace ZooFinder.Application.Common.Animals.Registration.Services.AnimalRegis
 public interface IAnimalRegistrationService
 {
     Task<AnimalRegistrationResult> RegisterAsync(
-        RegisterAnimalRequest request, CancellationToken cancellationToken);
+        RegisterAnimalRequest request,
+        CancellationToken cancellationToken);
 
     Task<AnimalRegistrationResult> RegisterAsync(
-        AnimalInformationDetailsResult information, CancellationToken cancellationToken);
+        AnimalInformationDetailsResult information,
+        CancellationToken cancellationToken);
 }

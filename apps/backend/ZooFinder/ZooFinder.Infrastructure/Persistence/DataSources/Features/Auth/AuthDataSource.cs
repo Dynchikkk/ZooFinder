@@ -15,24 +15,20 @@ public sealed class AuthDataSource : IAuthDataSource
         _dbContext = dbContext;
     }
 
-    public Task<UserAccount?> GetUserAccountByLoginAsync(
-        string login,
-        CancellationToken cancellationToken)
+    public Task<UserAccount?> GetUserAccountByLoginAsync(string login, CancellationToken cancellationToken)
     {
-        return _dbContext.UserAccounts.AsNoTracking()
+        return _dbContext.UserAccounts
+            .AsNoTracking()
             .SingleOrDefaultAsync(account => account.Login == login, cancellationToken);
     }
 
-    public async Task<bool> TryAddUserAccountAsync(
-        UserAccount userAccount,
-        CancellationToken cancellationToken)
+    public async Task<bool> TryAddUserAccountAsync(UserAccount userAccount, CancellationToken cancellationToken)
     {
         _dbContext.UserAccounts.Add(userAccount);
         var addedEntries = _dbContext.ChangeTracker.Entries()
             .Where(entry => entry.State == EntityState.Added &&
-                (ReferenceEquals(entry.Entity, userAccount) ||
-                 ReferenceEquals(entry.Entity, userAccount.UserProfile) ||
-                 userAccount.UserRefreshSessions.Any(session => ReferenceEquals(entry.Entity, session))))
+                (ReferenceEquals(entry.Entity, userAccount) || ReferenceEquals(entry.Entity, userAccount.UserProfile) ||
+                userAccount.UserRefreshSessions.Any(session => ReferenceEquals(entry.Entity, session))))
             .ToArray();
 
         try
@@ -50,9 +46,9 @@ public sealed class AuthDataSource : IAuthDataSource
 
             // Resolve a competing registration by its natural key, without provider error codes.
             if (userAccount.Login != null &&
-                await _dbContext.UserAccounts.IgnoreQueryFilters().AnyAsync(
-                    account => account.Login == userAccount.Login && account.Id != userAccount.Id,
-                    cancellationToken))
+                await _dbContext.UserAccounts
+                    .IgnoreQueryFilters()
+                    .AnyAsync(account => account.Login == userAccount.Login && account.Id != userAccount.Id, cancellationToken))
             {
                 return false;
             }
@@ -61,9 +57,7 @@ public sealed class AuthDataSource : IAuthDataSource
         }
     }
 
-    public async Task AddRefreshSessionAsync(
-        UserRefreshSession refreshSession,
-        CancellationToken cancellationToken)
+    public async Task AddRefreshSessionAsync(UserRefreshSession refreshSession, CancellationToken cancellationToken)
     {
         // The account is already persisted; attaching the navigation graph would insert it again.
         _dbContext.Entry(refreshSession).State = EntityState.Added;
@@ -89,8 +83,7 @@ public sealed class AuthDataSource : IAuthDataSource
         CancellationToken cancellationToken)
     {
         int count = await _dbContext.UserRefreshSessions
-            .Where(session => session.Id == refreshSessionId &&
-                session.RefreshTokenHash == currentRefreshTokenHash &&
+            .Where(session => session.Id == refreshSessionId && session.RefreshTokenHash == currentRefreshTokenHash &&
                 session.RevokedAtUtc == null && session.ExpiresAtUtc > usedAtUtc &&
                 session.UserAccount.Status == UserStatus.Active)
             .ExecuteUpdateAsync(setters => setters
@@ -101,15 +94,11 @@ public sealed class AuthDataSource : IAuthDataSource
         return count == 1;
     }
 
-    public async Task RevokeRefreshSessionAsync(
-        Guid refreshSessionId,
-        DateTime revokedAtUtc,
-        CancellationToken cancellationToken)
+    public async Task RevokeRefreshSessionAsync(Guid refreshSessionId, DateTime revokedAtUtc, CancellationToken cancellationToken)
     {
         await _dbContext.UserRefreshSessions
             .Where(session => session.Id == refreshSessionId && session.RevokedAtUtc == null)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(session => session.RevokedAtUtc, revokedAtUtc)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(session => session.RevokedAtUtc, revokedAtUtc)
                 .SetProperty(session => session.UpdatedAtUtc, revokedAtUtc), cancellationToken);
     }
 
@@ -118,11 +107,10 @@ public sealed class AuthDataSource : IAuthDataSource
         DateTime revokedAtUtc,
         CancellationToken cancellationToken)
     {
-        await _dbContext.UserRefreshSessions.IgnoreQueryFilters()
-            .Where(session => session.UserAccountId == userAccountId &&
-                !session.IsDeleted && session.RevokedAtUtc == null)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(session => session.RevokedAtUtc, revokedAtUtc)
+        await _dbContext.UserRefreshSessions
+            .IgnoreQueryFilters()
+            .Where(session => session.UserAccountId == userAccountId && !session.IsDeleted && session.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(session => session.RevokedAtUtc, revokedAtUtc)
                 .SetProperty(session => session.UpdatedAtUtc, revokedAtUtc), cancellationToken);
     }
 }

@@ -10,8 +10,7 @@ public sealed class ZooFinderDbContextFactory : IDesignTimeDbContextFactory<ZooF
         // The fallback supports generating migrations without a running server.
         string connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__ZooFinder")
             ?? "Server=localhost;Database=ZooFinder;Integrated Security=true;TrustServerCertificate=true";
-        var options = new DbContextOptionsBuilder<ZooFinderDbContext>()
-            .UseSqlServer(connectionString).Options;
+        var options = new DbContextOptionsBuilder<ZooFinderDbContext>().UseSqlServer(connectionString).Options;
         return new ZooFinderDbContext(options, TimeProvider.System);
     }
 }

@@ -10,9 +10,7 @@ public sealed class UserProfileDataSource : IUserProfileDataSource
     private readonly ZooFinderDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
 
-    public UserProfileDataSource(
-        ZooFinderDbContext dbContext,
-        TimeProvider timeProvider)
+    public UserProfileDataSource(ZooFinderDbContext dbContext, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -21,25 +19,20 @@ public sealed class UserProfileDataSource : IUserProfileDataSource
         _timeProvider = timeProvider;
     }
 
-    public Task<UserProfile?> GetByUserAccountIdAsync(
-        Guid userAccountId,
-        CancellationToken cancellationToken)
+    public Task<UserProfile?> GetByUserAccountIdAsync(Guid userAccountId, CancellationToken cancellationToken)
     {
-        return _dbContext.UserProfiles.AsNoTracking()
+        return _dbContext.UserProfiles
+            .AsNoTracking()
             .SingleOrDefaultAsync(profile => profile.UserAccountId == userAccountId, cancellationToken);
     }
 
-    public async Task UpdateAsync(
-        UserProfile userProfile,
-        CancellationToken cancellationToken)
+    public async Task UpdateAsync(UserProfile userProfile, CancellationToken cancellationToken)
     {
         DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
         int count = await _dbContext.UserProfiles
-            .Where(profile => profile.Id == userProfile.Id &&
-                profile.UserAccountId == userProfile.UserAccountId &&
+            .Where(profile => profile.Id == userProfile.Id && profile.UserAccountId == userProfile.UserAccountId &&
                 profile.UserAccount.Status == UserStatus.Active)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(profile => profile.DisplayName, userProfile.DisplayName)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(profile => profile.DisplayName, userProfile.DisplayName)
                 .SetProperty(profile => profile.UpdatedAtUtc, now), cancellationToken);
         if (count == 0)
         {

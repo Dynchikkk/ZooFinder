@@ -8,19 +8,33 @@ public enum AnimalRecognitionStatus
 }
 
 public sealed record AnimalRecognitionProviderRequest(
-    Stream ImageStream, string ContentType, string LanguageCode,
+    Stream ImageStream,
+    string ContentType,
+    string LanguageCode,
     IReadOnlyList<AnimalRecognitionContextCandidate> Candidates)
 {
     public bool HasParkContext => Candidates.Count > 0;
 }
 
-public sealed record AnimalRecognitionContextCandidate(Guid AnimalId, string CommonName, string? ScientificName);
+public sealed record AnimalRecognitionContextCandidate(
+    Guid AnimalId,
+    string CommonName,
+    string? ScientificName);
 
 public sealed record AnimalRecognitionProviderResult(
-    AnimalRecognitionStatus Status, string? CommonName, string? ScientificName,
+    AnimalRecognitionStatus Status,
+    string? CommonName,
+    string? ScientificName,
     IReadOnlyList<AnimalRecognitionProviderCandidate> Alternatives,
-    Guid? AnimalId = null, AnimalRecognitionExecutionResult? Execution = null);
+    Guid? AnimalId = null,
+    AnimalRecognitionExecutionResult? Execution = null);
 
-public sealed record AnimalRecognitionProviderCandidate(string? CommonName, string? ScientificName, Guid? AnimalId = null);
+public sealed record AnimalRecognitionProviderCandidate(
+    string? CommonName,
+    string? ScientificName,
+    Guid? AnimalId = null);
 
-public sealed record AnimalRecognitionExecutionResult(string ModelId, string? Revision, double InferenceMilliseconds);
+public sealed record AnimalRecognitionExecutionResult(
+    string ModelId,
+    string? Revision,
+    double InferenceMilliseconds);

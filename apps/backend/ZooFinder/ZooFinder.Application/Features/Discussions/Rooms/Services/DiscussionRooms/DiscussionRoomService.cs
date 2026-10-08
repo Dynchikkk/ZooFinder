@@ -23,12 +23,18 @@ public sealed class DiscussionRoomService : IDiscussionRoomService
     {
         DiscussionRoomValidator.ValidateAnimalId(animalId);
         var room = await _discussionDataSource.GetGeneralRoomByAnimalIdAsync(animalId, cancellationToken);
-        if (room == null || room.IsDeleted) return null;
+        if (room == null || room.IsDeleted)
+        {
+            return null;
+        }
+
         return new DiscussionRoomResponse(room.Id, room.AnimalId, room.Type, room.Name, room.Description, room.IsClosed);
     }
 
-    public async Task<DiscussionRoomResponse> CreateDiscussionAsync(Guid currentUserAccountId,
-        CreateDiscussionRequest request, CancellationToken cancellationToken)
+    public async Task<DiscussionRoomResponse> CreateDiscussionAsync(
+        Guid currentUserAccountId,
+        CreateDiscussionRequest request,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         DiscussionUserValidator.ValidateUserAccountId(currentUserAccountId);

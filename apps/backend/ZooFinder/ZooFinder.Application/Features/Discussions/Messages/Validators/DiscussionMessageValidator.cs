@@ -39,8 +39,7 @@ public static class DiscussionMessageValidator
     {
         if (limit < 1 || limit > PaginationDefaults.MaximumPageSize)
         {
-            throw new RequestValidationException(
-                $"Page size must be between 1 and {PaginationDefaults.MaximumPageSize}.");
+            throw new RequestValidationException($"Page size must be between 1 and {PaginationDefaults.MaximumPageSize}.");
         }
     }
 
@@ -57,18 +56,14 @@ public static class DiscussionMessageValidator
         }
     }
 
-    public static void ValidateMessagePermission(
-        DiscussionMessage message,
-        UserAccount currentUser)
+    public static void ValidateMessagePermission(DiscussionMessage message, UserAccount currentUser)
     {
         bool isAuthor = message.AuthorUserAccountId == currentUser.Id;
-        bool isModerator = currentUser.Role == UserRole.Moderator ||
-                           currentUser.Role == UserRole.Administrator;
+        bool isModerator = currentUser.Role == UserRole.Moderator || currentUser.Role == UserRole.Administrator;
 
         if (!isAuthor && !isModerator)
         {
-            throw new ForbiddenException(
-                "User account is not allowed to modify this message.");
+            throw new ForbiddenException("User account is not allowed to modify this message.");
         }
     }
 }

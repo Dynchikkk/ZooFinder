@@ -18,7 +18,8 @@ public sealed class AnimalRegistrationService : IAnimalRegistrationService
 
     public AnimalRegistrationService(
         IAnimalInformationProvider informationProvider,
-        IAnimalRegistrationDataSource dataSource, TimeProvider timeProvider)
+        IAnimalRegistrationDataSource dataSource,
+        TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(informationProvider);
         ArgumentNullException.ThrowIfNull(dataSource);
@@ -28,8 +29,7 @@ public sealed class AnimalRegistrationService : IAnimalRegistrationService
         _timeProvider = timeProvider;
     }
 
-    public async Task<AnimalRegistrationResult> RegisterAsync(
-        RegisterAnimalRequest request, CancellationToken cancellationToken)
+    public async Task<AnimalRegistrationResult> RegisterAsync(RegisterAnimalRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         string source = request.InformationSource.NormalizeInformationSource();
@@ -55,7 +55,8 @@ public sealed class AnimalRegistrationService : IAnimalRegistrationService
     }
 
     public async Task<AnimalRegistrationResult> RegisterAsync(
-        AnimalInformationDetailsResult information, CancellationToken cancellationToken)
+        AnimalInformationDetailsResult information,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(information);
         string source = information.InformationSource.NormalizeInformationSource();
@@ -71,19 +72,30 @@ public sealed class AnimalRegistrationService : IAnimalRegistrationService
         DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
         var animal = new Animal
         {
-            Id = Guid.NewGuid(), InformationSource = source, SourceItemId = itemId,
-            LanguageCode = language, Title = title,
+            Id = Guid.NewGuid(),
+            InformationSource = source,
+            SourceItemId = itemId,
+            LanguageCode = language,
+            Title = title,
             ScientificName = Normalize(information.ScientificName),
             ShortDescription = Normalize(information.ShortDescription),
-            ImageUrl = Normalize(information.ImageUrl), LastSynchronizedAtUtc = now,
-            CreatedAtUtc = now, UpdatedAtUtc = now
+            ImageUrl = Normalize(information.ImageUrl),
+            LastSynchronizedAtUtc = now,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
         };
+
         var room = new DiscussionRoom
         {
-            Id = Guid.NewGuid(), AnimalId = animal.Id, Animal = animal,
-            Type = DiscussionRoomType.General, Name = AnimalRegistrationDefaults.GeneralRoomName,
-            CreatedAtUtc = now, UpdatedAtUtc = now
+            Id = Guid.NewGuid(),
+            AnimalId = animal.Id,
+            Animal = animal,
+            Type = DiscussionRoomType.General,
+            Name = AnimalRegistrationDefaults.GeneralRoomName,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
         };
+
         animal.DiscussionRooms.Add(room);
         return CreateResult(await _dataSource.GetOrCreateAsync(animal, room, cancellationToken));
     }
@@ -94,9 +106,12 @@ public sealed class AnimalRegistrationService : IAnimalRegistrationService
         {
             throw new InvalidOperationException("Animal registration returned an invalid General room.");
         }
+
         return new AnimalRegistrationResult(room.AnimalId, room.Id);
     }
 
-    private static string? Normalize(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
 }

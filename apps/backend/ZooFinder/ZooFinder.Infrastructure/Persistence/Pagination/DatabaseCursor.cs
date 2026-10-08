@@ -17,9 +17,7 @@ internal sealed record DatabaseCursor(
         return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(values)));
     }
 
-    public static DatabaseCursor? Parse(
-        CursorPageRequest request,
-        string scope)
+    public static DatabaseCursor? Parse(CursorPageRequest request, string scope)
     {
         if (request.Limit < 1 || request.Limit > PaginationDefaults.MaximumPageSize)
         {
@@ -38,8 +36,7 @@ internal sealed record DatabaseCursor(
                 throw new FormatException();
             }
 
-            var cursor = JsonSerializer.Deserialize<DatabaseCursor>(
-                Convert.FromBase64String(request.Cursor));
+            var cursor = JsonSerializer.Deserialize<DatabaseCursor>(Convert.FromBase64String(request.Cursor));
             if (cursor == null || cursor.Version != 1 || cursor.Scope != scope ||
                 cursor.Id == Guid.Empty || cursor.CreatedAtUtc.Kind != DateTimeKind.Utc)
             {
@@ -58,10 +55,7 @@ internal sealed record DatabaseCursor(
         }
     }
 
-    public static string Encode(
-        string scope,
-        DateTime createdAtUtc,
-        Guid id)
+    public static string Encode(string scope, DateTime createdAtUtc, Guid id)
     {
         return Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(
             new DatabaseCursor(1, scope, DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc), id)));

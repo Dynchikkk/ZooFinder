@@ -39,9 +39,7 @@ public sealed class AuthService : IAuthService
 
         if (authSettings.RefreshSessionLifetime <= TimeSpan.Zero)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(authSettings),
-                "Refresh session lifetime must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(authSettings), "Refresh session lifetime must be greater than zero.");
         }
 
         _authDataSource = authDataSource;
@@ -53,9 +51,7 @@ public sealed class AuthService : IAuthService
         _timeProvider = timeProvider;
     }
 
-    public async Task<AuthResponse> RegisterAsync(
-        RegisterRequest request,
-        CancellationToken cancellationToken)
+    public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -106,25 +102,17 @@ public sealed class AuthService : IAuthService
 
         string accessToken = GenerateAccessToken(userAccount);
 
-        bool wasAdded = await _authDataSource.TryAddUserAccountAsync(
-            userAccount,
-            cancellationToken);
+        bool wasAdded = await _authDataSource.TryAddUserAccountAsync(userAccount, cancellationToken);
 
         if (!wasAdded)
         {
             throw new ConflictException("Login is already taken.");
         }
 
-        return new AuthResponse(
-            userAccount.Id,
-            accessToken,
-            refreshToken,
-            refreshSession.ExpiresAtUtc);
+        return new AuthResponse(userAccount.Id, accessToken, refreshToken, refreshSession.ExpiresAtUtc);
     }
 
-    public async Task<AuthResponse> LoginAsync(
-        LoginRequest request,
-        CancellationToken cancellationToken)
+    public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -132,13 +120,10 @@ public sealed class AuthService : IAuthService
         string password = request.Password ?? string.Empty;
         AuthValidator.ValidatePassword(password);
 
-        UserAccount userAccount = await _authDataSource.GetUserAccountByLoginAsync(
-            login,
-            cancellationToken)
+        UserAccount userAccount = await _authDataSource.GetUserAccountByLoginAsync(login, cancellationToken)
             ?? throw new UnauthorizedException("Login or password is invalid.");
 
-        if (userAccount.IsDeleted ||
-            userAccount.Status != UserStatus.Active ||
+        if (userAccount.IsDeleted || userAccount.Status != UserStatus.Active ||
             string.IsNullOrWhiteSpace(userAccount.PasswordHash) ||
             !_passwordHasher.VerifyPassword(password, userAccount.PasswordHash))
         {
@@ -163,16 +148,10 @@ public sealed class AuthService : IAuthService
 
         await _authDataSource.AddRefreshSessionAsync(refreshSession, cancellationToken);
 
-        return new AuthResponse(
-            userAccount.Id,
-            accessToken,
-            refreshToken,
-            refreshSession.ExpiresAtUtc);
+        return new AuthResponse(userAccount.Id, accessToken, refreshToken, refreshSession.ExpiresAtUtc);
     }
 
-    public async Task<AuthResponse> RefreshSessionAsync(
-        RefreshSessionRequest request,
-        CancellationToken cancellationToken)
+    public async Task<AuthResponse> RefreshSessionAsync(RefreshSessionRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -208,16 +187,10 @@ public sealed class AuthService : IAuthService
             throw new UnauthorizedException("Refresh session is no longer active.");
         }
 
-        return new AuthResponse(
-            userAccount.Id,
-            accessToken,
-            newRefreshToken,
-            newExpiresAtUtc);
+        return new AuthResponse(userAccount.Id, accessToken, newRefreshToken, newExpiresAtUtc);
     }
 
-    public async Task RevokeSessionAsync(
-        RevokeSessionRequest request,
-        CancellationToken cancellationToken)
+    public async Task RevokeSessionAsync(RevokeSessionRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -235,22 +208,14 @@ public sealed class AuthService : IAuthService
         }
 
         DateTime currentTime = GetCurrentTime();
-        await _authDataSource.RevokeRefreshSessionAsync(
-            refreshSession.Id,
-            currentTime,
-            cancellationToken);
+        await _authDataSource.RevokeRefreshSessionAsync(refreshSession.Id, currentTime, cancellationToken);
     }
 
-    public Task RevokeAllSessionsAsync(
-        Guid currentUserAccountId,
-        CancellationToken cancellationToken)
+    public Task RevokeAllSessionsAsync(Guid currentUserAccountId, CancellationToken cancellationToken)
     {
         AuthValidator.ValidateUserAccountId(currentUserAccountId);
 
-        return _authDataSource.RevokeAllRefreshSessionsAsync(
-            currentUserAccountId,
-            GetCurrentTime(),
-            cancellationToken);
+        return _authDataSource.RevokeAllRefreshSessionsAsync(currentUserAccountId, GetCurrentTime(), cancellationToken);
     }
 
     private string NormalizeRefreshToken(string? refreshToken)
@@ -316,13 +281,9 @@ public sealed class AuthService : IAuthService
         return accessToken;
     }
 
-    private static void ValidateRefreshSession(
-        UserRefreshSession refreshSession,
-        DateTime currentTime)
+    private static void ValidateRefreshSession(UserRefreshSession refreshSession, DateTime currentTime)
     {
-        if (refreshSession.IsDeleted ||
-            refreshSession.RevokedAtUtc != null ||
-            refreshSession.ExpiresAtUtc <= currentTime)
+        if (refreshSession.IsDeleted || refreshSession.RevokedAtUtc != null || refreshSession.ExpiresAtUtc <= currentTime)
         {
             throw new UnauthorizedException("Refresh session is no longer active.");
         }
