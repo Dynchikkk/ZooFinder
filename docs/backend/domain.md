@@ -9,6 +9,7 @@ ZooFinder.Domain/
 ├─ Animals/
 ├─ BaseEntities/
 ├─ Discussions/
+├─ Parks/
 └─ Users/
 ```
 
@@ -38,6 +39,9 @@ Animal 1 ─────── * DiscussionRoom
                                               └──── * UserRefreshSession
 ```
 
+`Park 1 → * ParkAnimal * ← 1 Animal`: a species can appear in several parks or none.
+`Park 1 → * ParkConnectionRequest`: commercial connection requests are separate from availability.
+
 ## Animal
 
 | Field | Type |
@@ -57,6 +61,15 @@ Rules:
 - `SourceUrl` is resolved by the information provider and is not persisted.
 - Search results are not persisted.
 - An animal is persisted when its General discussion room is created. The room may initially contain no messages.
+- Shared registration is used by park additions, imports, and explicit discussion creation. It creates a card and General room together, or reuses both by source identity, scientific name, or normalized title within the same language. Conflicting scientific names are not merged solely by title.
+
+## Parks
+
+`Park` contains `Name`, unique `Slug`, optional `Description`/`Address`, `Status`, and optional `OwnerUserAccountId` metadata. Status values are `Active` and `Suspended`; a new park is immediately active without an owner, species list, or payment. No owner/role authorization is applied to park operations in v1.
+
+`ParkAnimal` contains `ParkId`, `AnimalId`, optional `LocalDescription`, and `IsPublished`. `(ParkId, AnimalId)` is unique. It represents membership of a shared species, not an individual animal. Removing or editing membership does not change the shared animal or chat. Re-adding restores the existing association.
+
+`ParkConnectionRequest` contains `ParkId`, optional contact information/comment, `Status`, `AgreedAmount`, `Currency`, and `PaidAtUtc`. Only one unfinished request per park is allowed. Transitions are `Submitted → AwaitingPayment → Activated`; `Submitted`/`AwaitingPayment` may become `Rejected` or `Cancelled`. Approval records the price and currency; payment confirmation records UTC time. These states never control park availability in v1.
 
 ## DiscussionRoom
 

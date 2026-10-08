@@ -1,5 +1,6 @@
 using ZooFinder.Domain.BaseEntities;
 using ZooFinder.Domain.Discussions;
+using ZooFinder.Domain.Parks;
 
 namespace ZooFinder.Domain.Animals;
 
@@ -19,4 +20,5 @@ public class Animal : IdEntity<Guid>
     // Navigation
 
     public ICollection<DiscussionRoom> DiscussionRooms { get; set; } = [];
+    public ICollection<ParkAnimal> ParkAnimals { get; set; } = [];
 }
