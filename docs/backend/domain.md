@@ -2,6 +2,15 @@
 
 `ZooFinder.Domain` defines the project entities, relationships, and domain rules. It has no dependencies on other projects.
 
+**Status:** The nine entities and their EF mappings are implemented; the database has not been initialized
+through migrations. Global responsibilities are defined in [General architecture](../architecture.md).
+
+## Organization Rules
+
+Domain groups entities by subject area; it does not use Application's feature/service/dependency layout.
+Entity-based folders and namespaces are plural, while entity class names remain singular.
+Namespaces match placement. Avoid namespace/type collisions through these names, rather than entity aliases.
+
 ## Structure
 
 ```text
@@ -42,6 +51,10 @@ Animal 1 ─────── * DiscussionRoom
 `Park 1 → * ParkAnimal * ← 1 Animal`: a species can appear in several parks or none.
 `Park 1 → * ParkConnectionRequest`: commercial connection requests are separate from availability.
 
+`Park.OwnerUserAccountId` is optional metadata. `Animal.ParkAnimals` and `Park.ParkAnimals` contain association
+records, not animals or parks directly. One Animal in two parks therefore has two ParkAnimal records.
+`Park.ConnectionRequests` contains the park's connection requests.
+
 ## Animal
 
 | Field | Type |
@@ -58,6 +71,7 @@ Animal 1 ─────── * DiscussionRoom
 Rules:
 
 - `(InformationSource, LanguageCode, SourceItemId)` identifies one sourced animal.
+- Matching and reuse are language-scoped; ru/en source cards are not a language-independent Species entity.
 - `SourceUrl` is resolved by the information provider and is not persisted.
 - Search results are not persisted.
 - An animal is persisted when its General discussion room is created. The room may initially contain no messages.
@@ -95,7 +109,8 @@ Rules:
 - Each animal has one `General` room.
 - An animal may have multiple `Topic` rooms.
 - Room names are unique within an animal.
-- A `General` room cannot be deleted.
+- Application exposes no deletion operation for a `General` room; this is not enforced by a SQL CHECK constraint.
+- The unique `(AnimalId, Name)` index protects the fixed `General` name; uniqueness by room type alone is not enforced.
 
 ## DiscussionMessage
 

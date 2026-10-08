@@ -1,68 +1,84 @@
 # API Layer
 
-`ZooFinder.Api` is the HTTP transport and application composition layer.
+`ZooFinder.Api` is the future HTTP transport and composition root.
 
-> **Status:** In progress. This document may change.
+**Status:** Only Program.cs, project configuration, and settings exist. Program adds controllers/OpenAPI,
+maps controllers, and invokes HTTPS redirection/authorization middleware. No business controllers,
+Application/Infrastructure registrations, bearer authentication configuration, exception mapping,
+upload decoder, CSV parser, or SignalR Hub is implemented.
+
+The following sections describe required future behavior. Architectural boundaries are defined in
+[Architecture rules](../architecture.md).
 
 ## Responsibilities
 
-- expose Application use cases through controllers;
-- convert HTTP input to Application requests;
-- convert Application responses to HTTP responses;
-- resolve the authenticated user identity;
-- apply authentication and authorization policies;
-- map exceptions to problem responses;
-- configure OpenAPI and dependency injection.
+Controllers adapt transport input to Application scenarios and return their responses.
+Application services own business flow; controllers do not duplicate registration or transition rules.
 
-Controllers contain transport logic only. Application services own use-case flow.
+API will resolve authenticated identities, configure authentication, map errors, validate uploads,
+and compose services with Infrastructure implementations.
 
-## Endpoint Groups
+## Planned Endpoint Groups
 
 | Group | Operations |
 | --- | --- |
-| Animals | Search catalog, retrieve animal page |
-| Recognition | Upload image and return recognition suggestion |
-| Users | Retrieve public/current profile, update profile |
-| Auth | Register, login, refresh, revoke one session, revoke all sessions |
-| Discussions | Retrieve room and history, send, edit, delete message |
+| Animals | External/local catalog search and animal page |
+| Recognition | Image upload, optional ParkId, recognition result |
+| Parks | Park catalog/state, memberships/publication, import preview/apply, connection/payment tracking |
+| Users | Public/current profile read and authenticated profile update |
+| Auth | Register/login, refresh, revoke one/all sessions |
+| Discussions | General room, creation, history, send/edit/delete message |
 
-## Requests
+URLs and HTTP methods have not been implemented or finalized.
+Park operations are open to everyone in v1; they must not acquire owner/role/payment gates merely because
+existing Auth/Discussions use authentication. Public views still respect active/publication visibility.
 
-- Cancellation uses `HttpContext.RequestAborted`.
-- Pagination parameters map to Application pagination contracts.
-- Cursor values remain opaque.
-- Uploaded files are converted from `IFormFile` to the neutral recognition request.
-- Image validation checks size and file signature.
-- Authenticated account IDs come from validated claims, not request bodies.
+## Input Boundary
 
-## Responses
+- Pass `HttpContext.RequestAborted` into Application operations.
+- Map pagination to existing requests; treat cursors as opaque.
+- Adapt `IFormFile` to the stream-based recognition request. Check actual upload size and file signature,
+  not only client-supplied content type or declared length.
+- Pass optional `ParkId`; park candidates are read server-side by Recognition, not trusted from the browser.
+- Decode CSV into existing import-row contracts before Application preview/apply.
+  File decoding must not independently save species or memberships.
+- Obtain account IDs for protected operations from validated claims, not client-selected actor IDs.
 
-- API responses use Application response contracts or thin transport wrappers.
-- Dates use UTC.
-- Cursor responses return `Items` and `NextCursor`.
-- Deleted discussion content is excluded for regular users.
-- Recognition results are labeled as suggestions.
+Application already validates declared image length up to 10 MiB. Upload parsing and actual file validation
+remain pending, as does the internal .NET-to-Python HTTP schema.
 
-## Exception Mapping
+## Output Boundary
+
+Dates are UTC. Cursor pages return `Items` and `NextCursor`; offset pages retain page/size/count metadata.
+Use Application responses or thin transport wrappers.
+
+Recognition returns `Recognized`, `Uncertain`, or `NoAnimal`, names/alternatives, optional `ParkAnimalId`,
+and optional execution metadata. A technical inference failure must not be disguised as uncertainty.
+A park-card or separate catalog lookup supplies Wiki information; the model does not produce trusted source URLs.
+
+Deleted discussion-history items retain metadata with null content. Internal exception details and raw
+provider payloads are not public responses.
+
+## Planned Error Mapping
 
 | Application outcome | HTTP response |
 | --- | --- |
-| Invalid request | `400 Bad Request` |
-| Missing or invalid authentication | `401 Unauthorized` |
-| Insufficient permission | `403 Forbidden` |
-| Resource not found | `404 Not Found` |
-| State conflict | `409 Conflict` |
-| Unexpected failure | `500 Internal Server Error` |
+| Invalid request | 400 |
+| Missing/invalid authentication | 401 |
+| Insufficient permission | 403 |
+| Resource not found | 404 |
+| State conflict | 409 |
+| Unexpected failure | 500 |
 
-Errors use Problem Details. Internal exception data and external-provider payloads are not returned to clients.
+Problem Details mapping and concrete provider timeout/unavailability responses remain to be implemented.
 
-## Authentication
+## Authentication and Composition
 
-- Access tokens are accepted through the bearer scheme.
-- Refresh tokens are submitted only to authentication endpoints.
-- Authorization policies use account role and status.
-- Refresh-session revocation does not require persisting access tokens.
+Bearer access tokens, refresh endpoints, and existing account rules are planned around the current Application
+contracts. Refresh-session revocation does not require persisting access tokens.
 
-## Composition
+Composition must register Application services, nine data sources, providers/security/event implementations,
+DbContext, settings, and TimeProvider. A future Infrastructure registration helper is planned but absent.
 
-API registers Application services and Infrastructure implementations at startup. Configuration is bound and validated before the application begins accepting requests.
+Event transport/Hub placement must preserve the direction of dependencies: Infrastructure cannot reference Api.
+No runtime database creation/migration should be inferred from the current Program scaffold.

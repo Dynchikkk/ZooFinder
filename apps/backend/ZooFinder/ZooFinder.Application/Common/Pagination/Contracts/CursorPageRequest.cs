@@ -1,3 +1,5 @@
+using ZooFinder.Application.Common.Pagination.Constants;
+
 namespace ZooFinder.Application.Common.Pagination.Contracts;
 
 public sealed record CursorPageRequest(

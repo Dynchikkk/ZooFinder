@@ -1,19 +1,27 @@
-# Frontend Architecture
+# Frontend Plan
 
-The ZooFinder frontend is an Angular application written in TypeScript.
+**Status:** `apps/frontend` contains only `.gitkeep`. Angular/TypeScript is the selected frontend direction;
+there is no Angular project, dependency manifest, application code, or implemented screen yet.
 
-> **Status:** In progress. This document may change.
+Backend capabilities and remaining integrations are described in [Backend](../backend/README.md).
+The product sequence is described in the [roadmap](../planning/parks-and-recognition-roadmap.md).
 
-## Responsibilities
+## Planned User Flows
 
-- animal search and result cards;
-- animal details pages;
-- image upload and recognition results;
-- user registration and profile editing;
-- discussion history and message composition;
-- authentication session handling.
+- Select a park, photograph/upload an animal, view candidates, and open park information or Wiki.
+- Recognize an animal without a selected park.
+- Search external/local animal catalogs and view the shared card/discussion.
+- Create/edit parks and memberships, including local text and publication.
+- Preview and confirm CSV imports.
+- Submit/view connection requests and record approval/manual payment.
+- Register/login, edit a profile, and read/write discussions.
 
-## Feature Structure
+Parks work without a species list. New park-management and connection screens are available to everyone in v1.
+Existing account/message-write requirements remain applicable to their own screens.
+
+## Suggested Feature Organization
+
+The following is a proposed layout, not an existing or separately finalized frontend architecture:
 
 ```text
 src/app/
@@ -21,37 +29,33 @@ src/app/
 ├─ shared/
 └─ features/
    ├─ animals/
-   ├─ recognition/
-   ├─ users/
+   │  ├─ catalog/
+   │  └─ recognition/
+   ├─ parks/
+   │  ├─ catalog/
+   │  ├─ animals/
+   │  ├─ import/
+   │  └─ connections/
    ├─ auth/
+   ├─ users/
    └─ discussions/
 ```
 
-`core` contains application-wide services and configuration. `shared` contains reusable presentation components and utilities. Business UI is grouped by feature.
+Core handles application-wide composition/session infrastructure; shared contains reusable presentation
+components. Business UI belongs to features. Final Angular setup and component conventions will be chosen
+when frontend implementation starts.
 
-## Animal Flow
+## API Boundary and Display Rules
 
-```text
-Text search → catalog cards → animal page → discussion
+The browser communicates with ZooFinder.Api, not directly with Wiki, Python, or the database.
+Recognition and catalog are separate operations. A returned ParkAnimalId opens a park card; otherwise
+scientific/common names seed a separate catalog search.
 
-Image upload → recognition result → catalog search → animal page → discussion
-```
+Source URLs come from the information provider. Lists and fallback cards may lack a URL or image;
+the UI must support explicit empty states. Local park descriptions supplement shared information.
 
-Recognition and catalog are separate operations. The frontend starts catalog search with the scientific name and uses the common name as a fallback.
+LocalAnimalId/HasStartedDiscussion indicates a saved shared card and General room, which may have no messages.
+A shared discussion belongs to the species card, not a park. Deleted messages display metadata without content.
 
-## API Boundary
-
-- The frontend communicates only with `ZooFinder.Api`.
-- MediaWiki and Ollama are not called directly.
-- API cursors are opaque and returned unchanged for the next page.
-- `LocalAnimalId` indicates that the animal has a local discussion.
-- Recognition results are displayed as suggestions.
-- Authentication state is managed through access-token and refresh-session flows.
-
-## UI Rules
-
-- Search cards contain title, scientific name, and image when available.
-- Animal pages contain full provider information and discussion state.
-- Existing discussions show recent messages on the animal page.
-- Animals without a discussion show a start-discussion action.
-- Missing descriptions and images use explicit empty states.
+Cursor values are returned unchanged to request the next page. Recognition suggestions, uncertain results,
+technical errors, suspended parks, and a missing optional species list must remain distinguishable.

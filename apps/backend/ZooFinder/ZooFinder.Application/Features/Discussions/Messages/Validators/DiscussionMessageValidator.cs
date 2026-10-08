@@ -1,5 +1,5 @@
 using ZooFinder.Application.Common.ErrorHandling.Exceptions;
-using ZooFinder.Application.Common.Pagination.Contracts;
+using ZooFinder.Application.Common.Pagination.Constants;
 using ZooFinder.Application.Features.Discussions.Messages.Constants;
 using ZooFinder.Domain.Discussions;
 using ZooFinder.Domain.Users;

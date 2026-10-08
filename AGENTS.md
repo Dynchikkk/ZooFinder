@@ -1,13 +1,18 @@
-# Правила разработки ZooFinder
+# ZooFinder Development Rules
 
-## Проверки
+Before making any changes, read and apply the mandatory rules below.
+Before editing, check that the planned changes comply with documentation, code style, and architecture rules:
 
-- До завершающего этапа разработки не писать автоматические тесты, не создавать тестовые проекты и не добавлять тестовые зависимости или runner-ы.
-- Тесты добавляем в конце, когда основные функции и модель стабилизируются, либо по прямому запросу пользователя.
-- На текущем этапе проверять изменения сборкой решения и необходимыми ручными проверками.
+- [Development process](docs/development.md) — verification, tests, migrations, and documentation.
+- [General architecture](docs/architecture.md) — layer responsibilities, contracts, and dependency direction.
+- [Code style](docs/code-style.md) — formatting new and modified code.
 
-## Миграции БД
+Before editing a layer, read its current documentation and follow its specific rules:
 
-- Пока модель БД формируется, не создавать EF migrations и model snapshot.
-- После согласования модели создать одну начальную миграцию `Initial` для всей актуальной схемы.
-- Сохранять DbContext, конфигурации сущностей, репозитории и design-time factory; они нужны для будущей начальной миграции.
+- [Backend](docs/backend/README.md), [Domain](docs/backend/domain.md), [Application](docs/backend/application.md).
+- [Infrastructure](docs/backend/infrastructure.md), [API](docs/backend/api.md), [Frontend](docs/frontend/README.md).
+
+The [documentation index](docs/README.md) links to plans and the current project state.
+
+Plans do not replace mandatory rules; the user's latest instructions take precedence.
+Maintain detailed rules in the relevant documents and keep this file concise.

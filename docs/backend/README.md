@@ -1,6 +1,6 @@
 # Backend Architecture
 
-## Structure
+The backend contains four .NET 10 projects:
 
 ```text
 apps/backend/ZooFinder/
@@ -11,72 +11,78 @@ apps/backend/ZooFinder/
 └─ ZooFinder.slnx
 ```
 
-## Dependency Direction
+## Dependencies and Responsibilities
+
+Current project references point inward:
 
 ```text
-ZooFinder.Api ───────────→ ZooFinder.Application ─────→ ZooFinder.Domain
-       │
-       └───────────────→ ZooFinder.Infrastructure ───→ ZooFinder.Application
-                                                    └→ ZooFinder.Domain
+Api → Infrastructure → Application → Domain
 ```
 
-Dependencies point toward Domain. Domain contains the model, Application contains use cases and ports, Infrastructure implements ports, and API exposes use cases over HTTP.
+Api can access Application through the transitive reference and will invoke its services when composition
+is implemented. Infrastructure has no reference to Api; Domain references no other project.
 
-## Layers
+| Project | Responsibility | Current state |
+| --- | --- | --- |
+| Domain | Entities, relationships, enums | Nine entities implemented |
+| Application | Scenarios, validation, contracts, dependency interfaces | Eleven services implemented |
+| Infrastructure | Persistence and technical dependency implementations | Nine data sources and EF mappings implemented |
+| Api | HTTP transport, authentication, exception mapping, composition | Program/configuration scaffold only |
 
-| Project | Responsibility |
+Wiki/Python providers, security implementations, event transport, runtime DI, controllers, and upload handling
+remain pending. There is no initialized migration set or complete runnable business flow.
+
+Mandatory rules are maintained separately in [Architecture rules](../architecture.md),
+[Development process](../development.md), and [Code style](../code-style.md).
+
+## Feature Areas
+
+| Area | Modules |
 | --- | --- |
-| `ZooFinder.Domain` | Entities, relationships, enums, and domain rules |
-| `ZooFinder.Application` | Use cases, contracts, validation, mapping, and ports |
-| `ZooFinder.Infrastructure` | Persistence, external providers, security implementations, and configuration |
-| `ZooFinder.Api` | HTTP transport, authentication, exception mapping, and composition |
+| Animals | Catalog, Recognition |
+| Parks | Catalog, Animals, Import, Connections |
+| Discussions | Common, Rooms, Messages |
+| Auth | Registration/login/refresh/revocation services and security dependencies |
+| Users | Profile reads/updates |
 
-## Modules
+Common contains shared animal Information/Registration and technical Language/Pagination/ErrorHandling modules.
+It uses the same area/module structure as Features.
 
-| Module | Responsibility |
-| --- | --- |
-| Animals | External and local catalog search, animal pages, image recognition |
-| Users | Public and current-user profiles |
-| Auth | Registration, access tokens, refresh sessions, session revocation |
-| Discussions | Rooms, message history, message creation, editing, and deletion |
+## Implemented Application Flows
 
-## Core Flows
-
-### Animal catalog
+These flows describe callable services and persistence, not existing HTTP endpoints.
 
 ```text
-Client → API → AnimalCatalogService
-                    ├─ external scope → IAnimalInformationProvider
-                    └─ local scope ───→ IAnimalCatalogRepository
+AnimalCatalogService
+    ├─ external search/details → IAnimalInformationProvider (implementation pending)
+    └─ local catalog → IAnimalCatalogDataSource
+
+AnimalRecognitionService
+    ├─ optional park context → IAnimalRecognitionDataSource
+    └─ image + candidates → IAnimalRecognitionProvider (implementation pending)
+
+Park species addition / import apply / explicit discussion creation
+    → IAnimalRegistrationService
+    → reuse or create shared Animal + General room
+    → park operation upserts its ParkAnimal association
+
+DiscussionMessageService
+    → persist message through IDiscussionDataSource
+    → publish DiscussionMessageEvent (implementation pending)
 ```
 
-Catalog search and animal-page retrieval are read-only.
+Search/recognition do not create cards or discussions. Shared registration returns actual Animal/General-room
+IDs, including reuse. A shared card and room may exist outside every park.
 
-### Recognition
+Parks are active immediately, may have no species catalog, and do not depend on payment.
+All new park operations are open in v1. Recognition uses published associations as optional context;
+unknown and suspended parks are distinguished from an empty catalog.
 
-```text
-Client → API → AnimalRecognitionService → IAnimalRecognitionProvider
-```
+## Detailed Documentation
 
-Recognition returns names. The client starts a separate catalog search from the recognition result.
-
-### Discussion creation
-
-```text
-CreateDiscussion
-    → return existing General room
-    └─ when absent
-       → resolve animal information
-       → atomically create or retrieve the local animal and General room
-
-SendMessage
-    → persist the message
-    → publish the discussion event
-```
-
-## Layer Documentation
-
-- [Domain](domain.md)
-- [Application](application.md)
-- [Infrastructure](infrastructure.md)
-- [API](api.md)
+- [Domain](domain.md): entities and relationships.
+- [Application](application.md): ownership, service contracts, and scenario behavior.
+- [Infrastructure](infrastructure.md): actual DataSource paths, persistence, and planned integrations.
+- [API](api.md): scaffold status and transport requirements.
+- [Completed park-model changes](../planning/domain-application-changes.md).
+- [Remaining product/research work](../planning/parks-and-recognition-roadmap.md).

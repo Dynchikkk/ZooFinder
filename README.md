@@ -1,49 +1,76 @@
 # ZooFinder
 
-ZooFinder is a web platform for animal discovery, image-based animal recognition, and animal-specific discussions.
+ZooFinder is a web-platform project for animal discovery, photo-based species recognition in nature and
+safari parks, and shared animal discussions.
 
-> **Status:** In progress. Unfinished modules may change during implementation.
+**Status:** Domain, Application, and EF persistence are implemented. The API remains a scaffold.
+Wiki integration, the local Python recognition service/client, security implementations, event publishing,
+frontend, and deployment configuration are pending. There is no working end-to-end application yet.
 
-## Core Features
+## Product Scope
 
-- Search animals by name.
-- View animal information, images, and source links.
-- Recognize an animal from an uploaded image.
-- Create and participate in animal-specific discussions.
-- Register with a login and password, maintain a user session, and edit the public display name.
+- Search external and saved animal catalogs; view information, images, and source links.
+- Recognize a species from a photograph, optionally using a selected park's published catalog.
+- Maintain parks, shared-species memberships, local descriptions, and publication state.
+- Preview/apply decoded species imports and track connection requests/manual payment confirmation.
+- Register/login, edit profiles, and participate in animal discussions.
 
-Animals returned by search are not stored automatically. An animal is added to the local database when its first discussion is created.
+Search and recognition do not save animals automatically. Adding a species through a park or explicitly
+creating its discussion registers one shared Animal card and an empty General room. Other parks reuse them.
+Animal represents a sourced species card, not an individual animal; matching is scoped to language.
 
-## Technology
+A park works without a species list. Park operations are open to everyone in v1; owner/role restrictions and
+payment gating are deferred. Payment records demonstrate the business process without blocking park use.
+Existing authentication and discussion-write rules remain in force.
 
-- .NET 10 and ASP.NET Core
-- Entity Framework Core and Microsoft SQL Server
-- Angular and TypeScript
-- MediaWiki API for animal information
-- Ollama for image recognition
-- Docker Compose
+Neural inference will run locally using ready pretrained models, without training or fine-tuning.
+Wiki remains an external information source. Model comparison and evaluation belong to a later research stage.
 
-## Repository Structure
+## Technology and Availability
+
+| Technology | Current state |
+| --- | --- |
+| .NET 10 | Backend projects |
+| ASP.NET Core | API scaffold, without business endpoints or composition |
+| EF Core / Microsoft SQL Server | Context, configurations, and data sources; no current migrations |
+| Angular / TypeScript | Planned; frontend directory contains a placeholder |
+| MediaWiki API | Provider interface only |
+| Local Python inference | Provider contract only; service and HTTP adapter pending |
+| Docker Compose | Planned; no deployment configuration yet |
+
+## Repository
 
 ```text
 ZooFinder/
 ├─ apps/
-│  ├─ backend/
+│  ├─ backend/ZooFinder/
 │  └─ frontend/
 ├─ docs/
-├─ infra/
-└─ scripts/
+├─ infra/docker/
+├─ scripts/
+└─ AGENTS.md
 ```
 
 ## Documentation
 
-- [Backend architecture](docs/backend/README.md)
-- [Frontend architecture](docs/frontend/README.md)
+- [Documentation index](docs/README.md).
+- [Development process](docs/development.md), [Architecture rules](docs/architecture.md), [Code style](docs/code-style.md).
+- [Backend layers](docs/backend/README.md), [Frontend plan](docs/frontend/README.md).
+- [Product and research roadmap](docs/planning/parks-and-recognition-roadmap.md).
+
+`AGENTS.md` is a short entry point to the mandatory rules rather than a second copy of them.
 
 ## Build
+
+From the repository root with the .NET 10 SDK:
 
 ```powershell
 dotnet build apps/backend/ZooFinder/ZooFinder.slnx
 ```
 
-Database configuration and migrations are documented in [Infrastructure](docs/backend/infrastructure.md#connection-and-migrations).
+Automatic tests are deferred until the final development stage or an explicit user request.
+While the schema is forming, do not generate migrations or snapshots; one `Initial` migration follows model
+agreement. See [Development process](docs/development.md) and
+[database configuration](docs/backend/infrastructure.md#connection-and-migrations).
+
+A build does not require or initialize the database and does not demonstrate working provider integration.

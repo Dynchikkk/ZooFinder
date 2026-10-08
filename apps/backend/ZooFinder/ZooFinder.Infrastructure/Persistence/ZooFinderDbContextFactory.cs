@@ -15,4 +15,3 @@ public sealed class ZooFinderDbContextFactory : IDesignTimeDbContextFactory<ZooF
         return new ZooFinderDbContext(options, TimeProvider.System);
     }
 }
-

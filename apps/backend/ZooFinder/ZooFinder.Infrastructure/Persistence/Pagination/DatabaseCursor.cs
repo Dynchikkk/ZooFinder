@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using ZooFinder.Application.Common.ErrorHandling.Exceptions;
+using ZooFinder.Application.Common.Pagination.Constants;
 using ZooFinder.Application.Common.Pagination.Contracts;
 
 namespace ZooFinder.Infrastructure.Persistence.Pagination;

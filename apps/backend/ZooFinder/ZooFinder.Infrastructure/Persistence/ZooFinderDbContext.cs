@@ -4,6 +4,7 @@ using ZooFinder.Domain.Animals;
 using ZooFinder.Domain.BaseEntities;
 using ZooFinder.Domain.Discussions;
 using ZooFinder.Domain.Users;
+using ZooFinder.Domain.Parks;
 using ZooFinder.Infrastructure.Persistence.Configurations;
 
 namespace ZooFinder.Infrastructure.Persistence;
@@ -16,6 +17,9 @@ public sealed class ZooFinderDbContext : DbContext
     public DbSet<UserAccount> UserAccounts => Set<UserAccount>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<UserRefreshSession> UserRefreshSessions => Set<UserRefreshSession>();
+    public DbSet<Park> Parks => Set<Park>();
+    public DbSet<ParkAnimal> ParkAnimals => Set<ParkAnimal>();
+    public DbSet<ParkConnectionRequest> ParkConnectionRequests => Set<ParkConnectionRequest>();
 
     private readonly TimeProvider _timeProvider;
 
@@ -36,6 +40,9 @@ public sealed class ZooFinderDbContext : DbContext
         modelBuilder.ApplyConfiguration(new UserAccountConfiguration());
         modelBuilder.ApplyConfiguration(new UserProfileConfiguration());
         modelBuilder.ApplyConfiguration(new UserRefreshSessionConfiguration());
+        modelBuilder.ApplyConfiguration(new ParkConfiguration());
+        modelBuilder.ApplyConfiguration(new ParkAnimalConfiguration());
+        modelBuilder.ApplyConfiguration(new ParkConnectionConfiguration());
 
         // Store UTC values and restore their DateTime.Kind when reading.
         var utcConverter = new ValueConverter<DateTime, DateTime>(

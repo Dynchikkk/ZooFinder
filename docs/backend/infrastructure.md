@@ -1,56 +1,92 @@
 # Infrastructure Layer
 
-`ZooFinder.Infrastructure` implements Application ports for persistence, external information, recognition, security, and discussion events.
+`ZooFinder.Infrastructure` implements Application data sources and technical dependencies.
 
-> **Status:** Persistence is implemented. External providers, security implementations, and discussion-event publishing are still pending.
+**Status:** EF persistence is implemented. Wiki/Python providers, security implementations, event publishing,
+and runtime dependency registration are not implemented. Global boundaries are in
+[General architecture](../architecture.md). Placement rules for this layer are defined below;
+tests and migration policy are in [Development rules](../development.md).
 
-## Structure
+## DataSource Placement Rules
+
+Storage implementations belong to Persistence/DataSources/Features and Persistence/DataSources/Common.
+Under each branch, repeat the Application interface owner's area/module hierarchy.
+Files remain flat in final module folders. Ownership, rather than the queried tables, determines placement.
+
+Preserve soft-deletion, publication, and scenario-specific visibility when reading.
+Reuse repeated EF query details within Infrastructure when useful, without copying a complete foreign source.
+This mapping does not impose Application's FSD structure on the rest of Infrastructure.
+DbContext, entity configurations, cursors, and integration implementations follow their technical responsibility.
+
+## Current Structure
 
 ```text
 ZooFinder.Infrastructure/
-├─ Persistence/
-│  ├─ ZooFinderDbContext.cs
-│  ├─ ZooFinderDbContextFactory.cs
-│  ├─ Configurations/
-│  ├─ Pagination/
-│  ├─ Repositories/
-│  └─ Migrations/
-├─ AnimalInformation/
-├─ Recognition/
-└─ Security/
+└─ Persistence/
+   ├─ ZooFinderDbContext.cs
+   ├─ ZooFinderDbContextFactory.cs
+   ├─ Configurations/
+   ├─ Pagination/DatabaseCursor.cs
+   └─ DataSources/
+      ├─ Features/
+      │  ├─ Animals/
+      │  │  ├─ Catalog/AnimalCatalogDataSource.cs
+      │  │  └─ Recognition/AnimalRecognitionDataSource.cs
+      │  ├─ Parks/
+      │  │  ├─ Catalog/ParkCatalogDataSource.cs
+      │  │  ├─ Animals/ParkAnimalDataSource.cs
+      │  │  └─ Connections/ParkConnectionDataSource.cs
+      │  ├─ Discussions/
+      │  │  └─ Common/DiscussionDataSource.cs
+      │  ├─ Auth/AuthDataSource.cs
+      │  └─ Users/UserProfileDataSource.cs
+      └─ Common/
+         └─ Animals/
+            └─ Registration/AnimalRegistrationDataSource.cs
 ```
 
-## Port Implementations
+The DataSource path repeats the area/module of the Application interface owner. Recognition's source reads
+parks and memberships but belongs to Animals/Recognition. Common registration belongs to Common/Animals/Registration.
+Files remain flat in each final module folder.
 
-| Application port | Infrastructure implementation |
-| --- | --- |
-| `IAnimalCatalogRepository` | Entity Framework Core catalog repository |
-| `IDiscussionRepository` | Entity Framework Core discussion repository |
-| `IUserProfileRepository` | Entity Framework Core repository |
-| `IAuthRepository` | Entity Framework Core authentication repository |
-| `IAnimalInformationProvider` | MediaWiki provider |
-| `IAnimalRecognitionProvider` | Ollama provider |
-| `IAccessTokenProvider` | JWT provider |
-| `IPasswordHasher` | Password hash implementation |
-| `IRefreshTokenGenerator` | Cryptographic token generator |
-| `IRefreshTokenHasher` | Refresh-token hash implementation |
-| `IDiscussionEventPublisher` | SignalR publisher |
+Configurations map Domain entities and remain under `Persistence/Configurations`.
+The context and cursor implementation are shared persistence infrastructure.
 
-## Persistence
+## Implementations
 
-The context, entity configurations, and repositories use provider-neutral EF Core APIs. SQL Server is currently selected only by the design-time factory and its migrations. Runtime provider selection belongs to the API composition root.
+| Application interface | Implementation | Status |
+| --- | --- | --- |
+| `IAnimalCatalogDataSource` | `AnimalCatalogDataSource` | Implemented |
+| `IAnimalRecognitionDataSource` | `AnimalRecognitionDataSource` | Implemented |
+| `IParkCatalogDataSource` | `ParkCatalogDataSource` | Implemented |
+| `IParkAnimalDataSource` | `ParkAnimalDataSource` | Implemented |
+| `IParkConnectionDataSource` | `ParkConnectionDataSource` | Implemented |
+| `IDiscussionDataSource` | `DiscussionDataSource` | Implemented |
+| `IAuthDataSource` | `AuthDataSource` | Implemented |
+| `IUserProfileDataSource` | `UserProfileDataSource` | Implemented |
+| `IAnimalRegistrationDataSource` | `AnimalRegistrationDataSource` | Implemented |
+| `IAnimalInformationProvider` | Wiki adapter | Pending |
+| `IAnimalRecognitionProvider` | HTTP adapter to local Python | Pending |
+| Auth hashing/token interfaces | Security implementations | Pending |
+| `IDiscussionEventPublisher` | Discussion event transport | Pending |
 
-Infrastructure owns:
+Future provider implementations can mirror their Application owners under Infrastructure `Features` and
+`Common`, using area/module/dependency/component grouping. These branches are not present yet.
+HTTP models and provider settings belong to the concrete integration; Application contracts remain in Application.
+The Python model is selected inside Python, without requiring a separate .NET provider for each model.
 
-- `DbContext`;
-- entity configurations;
-- indexes and constraints;
-- repository implementations;
-- migrations;
-- transactions;
-- soft-delete filtering.
+A future `AddInfrastructure(...)` registration helper is planned. It has not been added; API is still a scaffold.
+The concrete SignalR/Hub placement and transport composition must be resolved during that implementation;
+Infrastructure must not reference Api.
 
-Required database constraints:
+## Persistence and Provider Assumptions
+
+Sources and context use EF Core. SQL Server is selected by the design-time factory and referenced by the project.
+Runtime context registration is still pending. The unfinished-connection unique index uses a SQL Server filter;
+changing providers requires reviewing index syntax, null handling, comparison behavior, and transactions.
+
+Infrastructure owns mappings, indexes, transactions, filtering, sources, and the future Initial migration.
+No general-purpose repository base class or UnitOfWork is introduced.
 
 | Entity | Constraint |
 | --- | --- |
@@ -59,90 +95,128 @@ Required database constraints:
 | `UserProfile` | Unique `UserAccountId` |
 | `UserAccount` | Unique non-null `Login` |
 | `UserRefreshSession` | Indexed `UserAccountId`; unique `RefreshTokenHash` |
+| `Park` | Unique `Slug`, including deleted parks |
+| `ParkAnimal` | Unique `(ParkId, AnimalId)`, including deleted associations |
+| `ParkConnectionRequest` | Unique `ParkId` where not deleted and status is Submitted/AwaitingPayment |
 
-`TryAddUserAccountAsync` atomically stores the account, profile, and initial refresh session. A duplicate normalized login returns `false`.
+Application creates General rooms with the fixed name `General`; the unique animal/name index protects that flow.
+The database does not independently enforce one room per type or prohibit direct General-room deletion.
+Business-input validation lives in Application; mappings do not add SQL CHECK expressions.
+Explicit collations are not configured, so other string comparisons follow the database's rules.
+Application normalizes logins before storage calls.
 
-`TryRotateRefreshSessionAsync` uses a conditional update. It succeeds only when the stored hash equals the expected hash and the session is active at the supplied use time.
+## Context and Visibility
 
-`GetOrCreateDiscussionAsync` uses the sourced-animal uniqueness constraint to atomically create the animal and its `General` room or return the existing room. Messages are stored by separate operations.
+`ZooFinderDbContext` maps nine tables. Relationships use `ClientNoAction`: deletes do not cascade through
+the graph or clear required foreign keys. Both synchronous and asynchronous SaveChanges convert tracked
+deletions to soft deletion, set deletion/update times, and use `TimeProvider` for UTC timestamps.
+Inserts receive creation/update timestamps; normal updates preserve creation time.
+Converters write UTC and restore `DateTime.Kind` when reading.
 
-Application creates General rooms with the fixed name `General`, so the unique `(AnimalId, Name)` index protects this creation flow without a filtered index. The shared model does not enforce one room per type independently of its name. Business-input checks live in Application; the shared EF configurations do not contain SQL `CHECK` expressions.
+Global filters hide deleted rows. Related visibility filters hide profiles/sessions of deleted accounts,
+rooms/messages of deleted animals or rooms, memberships of deleted parks/animals, and requests of deleted parks.
+Filtering does not modify or cascade-delete child rows. Unique identities remain reserved.
 
-Column types and database-specific index conventions are selected by the provider. Explicit collations are not configured in the shared model. Application normalizes logins before repository calls; other string comparisons follow the selected database's comparison rules. Changing providers requires reviewing those rules, null handling in unique indexes, and translation of LINQ/bulk-update queries; changing a connection string alone is not sufficient.
+Membership upsert restores a deleted association with its original ID and changes local description/publication.
+It does not delete, recreate, or edit the shared animal or room. Recognition context excludes unpublished links;
+Application rejects a suspended park after reading its status.
 
-### Context and soft deletion
+History queries bypass filters to retain deleted messages and author information, then reapply room/animal
+visibility. Application hides deleted content by returning null. Deleted authors do not erase history.
 
-`ZooFinderDbContext` maps six separate tables. Relationships use `ClientNoAction`: neither EF nor the database cascades deletes or clears required foreign keys. Both synchronous and asynchronous `SaveChanges` convert tracked deletions to `IsDeleted = true`, set `DeletedAtUtc`, and update `UpdatedAtUtc`. Inserts receive creation and update timestamps from `TimeProvider`. Updates preserve the stored creation timestamp. Date converters write UTC values and restore UTC `DateTime.Kind` when reading.
+Bulk updates explicitly apply activity/visibility predicates and timestamps because they bypass SaveChanges.
+Sources do not use physical ExecuteDelete or raw SQL deletes.
 
-Global filters hide deleted rows. Profiles and refresh sessions also hide rows belonging to deleted accounts; rooms and messages hide rows belonging to deleted animals or rooms. This is visibility filtering, not cascading modification of child rows. Unique identities remain reserved after soft deletion. Application exposes no operation for deleting General rooms; the shared model does not use a SQL check constraint to prevent direct deletion.
+## Atomic Operations and Concurrency
 
-History queries explicitly bypass the filters to retain deleted messages and author profiles, then reapply room and animal visibility. Application replaces deleted message content with `null` in its response. A deleted author does not erase discussion history.
+- Account registration stores account, profile, and initial session in one SaveChanges transaction.
+  After a write conflict, it detaches the failed graph and checks for a competing normalized login,
+  including deleted accounts. Only a confirmed duplicate returns false; other database errors are rethrown.
+- Refresh rotation conditionally updates the expected hash while checking session expiry, revocation,
+  deletion, and account state. Competing rotations cannot both update the same expected hash.
+- Shared card/room registration uses a serializable transaction. Matching checks source identity,
+  scientific name, then normalized title within a language. Ambiguous matches, conflicting scientific names,
+  or deleted canonical records produce a conflict. After DbUpdateException, an existing exact sourced room
+  can be returned; other failures are rethrown.
+- Park slug reservation and membership batches use serializable transactions. Batch members are validated
+  before link writes. Shared cards/rooms are registered beforehand in separate transactions and may survive
+  a later membership failure.
+- Connection submission prevents two unfinished requests. Transitions conditionally update the expected state
+  without changing park availability.
+- Adding a session/message tracks only the new row, avoiding reinsertion of detached account/room graphs.
+- Profile updates require an active account and change display name/update time.
+  Message updates cannot restore a concurrently deleted message or write to a closed room.
 
-Bulk repository updates use `ExecuteUpdateAsync`, so they explicitly set audit timestamps and include visibility/activity predicates. Physical `ExecuteDelete` and raw SQL deletes bypass the context's soft-delete handling and are not used by repositories. See [EF Core query filters](https://learn.microsoft.com/en-us/ef/core/querying/filters) and [bulk updates](https://learn.microsoft.com/en-us/ef/core/saving/execute-insert-update-delete).
+These behaviors describe implementation, not completed SQL Server concurrency testing.
+Such testing belongs to the final verification stage.
 
-### Repository behavior
+## Pagination
 
-- Read operations use `AsNoTracking`. Profile reads do not load the account graph.
-- Registration persists the account, profile, and initial session in one `SaveChanges` transaction. After `DbUpdateException`, the failed graph is detached and the repository checks for a competing account with the same login, including deleted accounts. A confirmed conflict returns `false`; without that competing account the exception is rethrown. No database-specific exception types or error numbers are inspected.
-- Refresh rotation uses one conditional update, checking the expected hash, expiration, revocation, deletion, and current account status. Only one concurrent rotation can succeed.
-- Discussion creation persists the animal and General room in one transaction. After `DbUpdateException`, the losing graph is detached and the repository looks up the requested discussion by animal identity. An existing room is returned; a deleted animal produces a conflict; otherwise the exception is rethrown.
-- Adding a session or message tracks only the new row, so detached account/room navigations are not inserted again.
-- Profile updates require an active account and update only the display name and timestamp. Message updates cannot restore a concurrently deleted message or write to a closed room.
+Local catalog and message history order by `CreatedAtUtc DESC, Id DESC`.
+Versioned Base64 JSON cursors contain the last key and a hash binding the cursor to search term/language or room.
+They are continuation values, not authorization credentials.
 
-Catalog results and message history are ordered by `CreatedAtUtc DESC, Id DESC`. Their versioned Base64 JSON cursors contain the last ordering key and a hash binding the cursor to the query (search term/language or discussion room). The cursor is not an authorization credential. Invalid or mismatched cursors produce `RequestValidationException`. Each query requests one extra row to determine whether a next page exists.
+Invalid or mismatched cursors produce `RequestValidationException`. Queries fetch one extra row to determine
+whether another page exists. External Wiki cursors will be mapped independently by that provider.
 
-### Connection and migrations
+## Connection and Migrations
 
-Runtime registration of the context, `TimeProvider`, and repositories is deferred to the API composition root. Development configuration contains a local SQL Server connection string with Windows authentication under `ConnectionStrings:ZooFinder`. Other environments can supply it via `ConnectionStrings__ZooFinder`; credentials must not be committed.
+Development settings contain a local Windows-authenticated SQL Server connection under
+`ConnectionStrings:ZooFinder`. The factory reads `ConnectionStrings__ZooFinder`, otherwise using the local
+development connection. Runtime configuration must be wired when the API composition root is implemented.
 
-The design-time factory reads the same environment variable and otherwise uses the local development connection. `InitialPersistence` creates the original SQL Server schema. `RemoveProviderSpecificConfiguration` removes the explicit collations, SQL check constraints, and filtered General-room index; the snapshot reflects the current shared model. Both migrations are generated for SQL Server and are not interchangeable with another provider's migrations. The application does not create or migrate the database on startup.
+Previous migrations and snapshot were removed. Do not create replacements while the schema is still forming.
+Keep the context, configurations, sources, and factory; after model agreement, create one `Initial` migration.
+The application currently neither initializes nor migrates the database on startup.
 
-Run these commands from the repository root with the EF CLI available (EF Core packages use version `10.0.8`):
+The following commands are for that later stage only, from the repository root with the EF CLI installed:
 
 ```powershell
-# Review the migration SQL without connecting to a database.
+dotnet ef migrations add Initial --project apps/backend/ZooFinder/ZooFinder.Infrastructure
+
 dotnet ef migrations script --idempotent --project apps/backend/ZooFinder/ZooFinder.Infrastructure
 
-# Apply to the database selected by ConnectionStrings__ZooFinder.
 dotnet ef database update --project apps/backend/ZooFinder/ZooFinder.Infrastructure
 ```
 
-## MediaWiki
+Review generated SQL before applying it. Do not commit database credentials.
 
-The MediaWiki implementation:
+## Wiki Integration — Pending
 
-- searches articles by normalized animal name;
-- retrieves article details by source item identifier and language;
-- returns title, scientific name, short description, preview image, and source URL;
-- maps MediaWiki pagination data to the Application cursor;
-- maps transport models to `AnimalInformationSearchResult` and `AnimalInformationDetailsResult`.
+The planned provider searches articles and retrieves title, scientific name, description, preview image,
+and source URL using source identity/language. Transport DTOs remain internal to Infrastructure.
+Results map to `AnimalInformationSearchResult` and `AnimalInformationDetailsResult`.
 
-MediaWiki transport models remain internal to Infrastructure.
+Transport unavailability must map to `AnimalInformationUnavailableException` for park-card cached fallback.
+Cancellation and invalid/programming results must remain distinct from unavailable information.
+A concrete provider, transport settings, caching, and runtime registration are not implemented.
 
-## Ollama
+## Python Recognition — Pending
 
-The Ollama implementation sends the uploaded image and a fixed structured prompt to a vision model. `qwen3-vl:2b` is the initial model.
+The .NET HTTP adapter will send an image, language, and optional park candidates to a small local Python service.
+Python loads ready pretrained weights and selects the model through configuration; no training or fine-tuning.
+Python has no direct access to the ZooFinder database and does not retrieve Wiki information.
 
-The provider maps the model response to `AnimalRecognitionProviderResult`:
+The existing Application result contains:
 
 ```text
-IsAnimal
+Status: Recognized / Uncertain / NoAnimal
 CommonName
 ScientificName
 Alternatives
+AnimalId: optional, only from supplied context
+Execution: optional ModelId / Revision / InferenceMilliseconds
 ```
 
-Model name, service URL, timeout, and response limits are configuration values. Uploaded images are not persisted.
+The HTTP wire schema, service URL/timeouts, error mapping, and concrete model adapters remain to be implemented.
+Images, recognition history, and experiment tables are not persisted.
+Research plans and proposed extensions are documented separately in the [roadmap](../planning/parks-and-recognition-roadmap.md).
 
-## Security
+## Security and Events — Pending
 
-- Access tokens are short-lived JWTs.
-- Refresh tokens are generated with a cryptographically secure random source.
-- Only refresh-token hashes are persisted.
-- Refresh-token rotation invalidates the previous token.
-- Account role is included in authorization claims.
-- Account status is checked for protected write operations.
+Application already defines hashing, token generation, access-token production, and event publishing ports.
+Planned security behavior includes short-lived bearer access tokens, cryptographic refresh tokens,
+hash-only refresh-token storage, and rotation. No concrete JWT/hash implementation is present.
 
-## Dependency Registration
-
-Infrastructure contains implementations without dependency-registration helpers. The API composition root will register the context, repositories, external providers, security services, and discussion-event publisher when API wiring is implemented. Runtime persistence registration is not configured yet.
+The publisher uses dependency-owned `DiscussionMessageEvent`, not service responses.
+Message persistence and publishing are separate operations; no outbox or reliable-delivery implementation exists.
