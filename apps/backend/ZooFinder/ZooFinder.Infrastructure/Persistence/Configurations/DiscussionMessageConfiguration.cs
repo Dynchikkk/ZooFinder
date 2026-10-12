@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ZooFinder.Application.Features.Discussions.Messages.Constants;
+using ZooFinder.Application.Modules.Discussions.Modules.Messages.Constants;
 using ZooFinder.Domain.Discussions;
 
 namespace ZooFinder.Infrastructure.Persistence.Configurations;

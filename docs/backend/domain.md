@@ -7,7 +7,7 @@ through migrations. Global responsibilities are defined in [General architecture
 
 ## Organization Rules
 
-Domain groups entities by subject area; it does not use Application's feature/service/dependency layout.
+Domain groups entities by subject area; it does not use Application's recursive module/service/dependency layout.
 Entity-based folders and namespaces are plural, while entity class names remain singular.
 Namespaces match placement. Avoid namespace/type collisions through these names, rather than entity aliases.
 

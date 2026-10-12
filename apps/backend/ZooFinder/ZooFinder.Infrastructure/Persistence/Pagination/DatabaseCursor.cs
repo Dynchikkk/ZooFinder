@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using System.Text.Json;
-using ZooFinder.Application.Common.ErrorHandling.Exceptions;
-using ZooFinder.Application.Common.Pagination.Constants;
-using ZooFinder.Application.Common.Pagination.Contracts;
+using ZooFinder.Application.Shared.ErrorHandling.Exceptions;
+using ZooFinder.Application.Shared.Pagination.Constants;
+using ZooFinder.Application.Shared.Pagination.Contracts;
 
 namespace ZooFinder.Infrastructure.Persistence.Pagination;
 

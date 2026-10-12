@@ -35,18 +35,32 @@ remain pending. There is no initialized migration set or complete runnable busin
 Mandatory rules are maintained separately in [Architecture rules](../architecture.md),
 [Development process](../development.md), and [Code style](../code-style.md).
 
-## Feature Areas
+## Business Modules
 
-| Area | Modules |
+| Parent | Current child modules |
 | --- | --- |
 | Animals | Catalog, Recognition |
+| Auth | Authentication |
 | Parks | Catalog, Animals, Import, Connections |
-| Discussions | Common, Rooms, Messages |
-| Auth | Registration/login/refresh/revocation services and security dependencies |
-| Users | Profile reads/updates |
+| Discussions | Rooms, Messages |
+| Users | Profiles |
 
-Common contains shared animal Information/Registration and technical Language/Pagination/ErrorHandling modules.
-It uses the same area/module structure as Features.
+Application roots are Modules, Common, and Shared.
+Every business module can own purpose folders and a Modules folder for recursive children.
+There is no fixed nesting depth and no requirement to create a child for each service.
+
+Common/Animals owns shared animal information support and AnimalRegistrationService directly.
+Shared owns technical Pagination, ErrorHandling, and Language components.
+Parent-owned components remain close to their consumers: park sources/guards and discussion sources/account
+checks serve multiple children without sibling imports.
+
+Ordinary sibling modules are independent. Children use explicitly shared ancestor components;
+parents coordinate children through public contracts. Common/Shared are shared exceptions, with no cycles.
+The existing AuthService retains all its related operations inside Authentication; there is no separate Sessions service.
+
+Infrastructure places implementations under Modules. Application/Common/<Module> merges into that same
+Infrastructure module, while nested primary modules preserve their recursive path.
+Shared DbContext/configurations/database cursors remain in Persistence.
 
 ## Implemented Application Flows
 

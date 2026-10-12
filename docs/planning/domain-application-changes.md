@@ -46,19 +46,23 @@ Matching is scoped to language; no language-independent Species/Taxon model was 
 
 ## Application
 
-| Area/module | Implemented functionality |
+| Owner | Implemented functionality |
 | --- | --- |
-| Parks/Catalog | Create, read/search, edit, and change status |
-| Parks/Animals | Add/reuse species, local description, publication, and association removal |
-| Parks/Import | Preview decoded rows and apply confirmed matches |
-| Parks/Connections | Request submission, price approval, manual payment, rejection/cancellation |
-| Common/Animals/Registration | Shared Animal + General registration, returning actual IDs |
-| Common/Animals/Information | Information-provider contract, normalization, and validation |
-| Animals/Recognition | Optional ParkId, published context, statuses, and provider-result validation |
+| Modules/Parks/Modules/Catalog | Create, read/search, edit, and change park status |
+| Modules/Parks/Modules/Animals | Add/reuse species, local text, publication, and removal |
+| Modules/Parks/Modules/Import | Preview decoded rows and apply confirmed matches |
+| Modules/Parks/Modules/Connections | Request, price approval, payment, rejection/cancellation |
+| Common/Animals | Shared registration and information-provider support |
+| Modules/Animals/Modules/Recognition | Optional ParkId, published context, and result validation |
 
-Services, interfaces, and service contracts are grouped under Services/<Name>/.
-Dependencies are grouped under Dependencies/<Name>/; data sources use flat DataSources folders.
-Separate Interfaces and service Contracts directories were removed.
+Application roots are Modules, Common, and Shared. Business modules recursively contain their own purpose
+folders and optional child Modules. Shared technical code no longer belongs to Common.
+A service may implement several related operations; nesting does not require splitting every service.
+
+Services retain their interface, implementation, and service contracts in Services/<Name>.
+Dependencies own their contracts; DataSources stay flat.
+Shared parent-level sources/validators are retained to prevent private sibling dependencies.
+Ordinary siblings are independent; Common and Shared are explicit shared exceptions.
 
 ### Shared Registration
 
@@ -74,7 +78,7 @@ Removing ParkAnimal does not remove the shared Animal or discussion.
 ### Recognition Context
 
 IAnimalRecognitionDataSource and ParkRecognitionContextResult belong to
-Features/Animals/Recognition/DataSources. There is no shared ParkInformation module.
+Modules/Animals/Modules/Recognition/DataSources. There is no shared ParkInformation module.
 
 An existing empty catalog is distinguished from an unknown/suspended park.
 The provider receives only published candidates. Returned IDs are checked against that context
@@ -97,15 +101,25 @@ Closed requests cannot be reopened; transitions use conditional writes against t
 ## Persistence
 
 Nine DataSources, the DbContext, and configurations for nine entities are implemented.
-Implementation paths mirror the interface owner:
+Infrastructure/Modules mirrors primary Application/Modules paths.
+Application/Common/<Module> maps into Infrastructure/Modules/<Module> and merges matching paths.
+No Common root is maintained in Infrastructure.
 
 ```text
-Persistence/DataSources/Features/<Area>/<Module>/
-Persistence/DataSources/Common/<Area>/<Module>/
+Modules/Animals/DataSources/AnimalRegistrationDataSource.cs
+Modules/Animals/Modules/Catalog/DataSources/AnimalCatalogDataSource.cs
+Modules/Animals/Modules/Recognition/DataSources/AnimalRecognitionDataSource.cs
+Modules/Parks/DataSources/
+Modules/Parks/Modules/Connections/DataSources/
+Modules/Discussions/DataSources/
+Modules/Auth/DataSources/
+Modules/Users/Modules/Profiles/DataSources/
 ```
 
-Auth and Users have no additional module level. Discussion sources belong to
-Features/Discussions/Common; this Common is local to discussions.
+Application interfaces retain their original business owners regardless of Infrastructure folder merging.
+Pending providers follow the same owner-path mapping under Dependencies.
+Shared context, factory, configurations, and database cursors remain in Persistence.
+This reorganization preserved business code/contracts and did not add placeholder module implementations.
 
 Migrations and the snapshot were removed; this stage did not initialize the live schema.
 One Initial migration follows model agreement.

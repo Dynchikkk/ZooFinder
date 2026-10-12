@@ -25,6 +25,20 @@ The composition root connects interfaces to implementations.
 Direct references to technical implementations must not enter business scenarios.
 Circular dependencies between components are not allowed.
 
+## Module Boundaries
+
+Business modules may contain their own components and nested modules.
+Ordinary sibling modules must not depend on each other's private components, including service/data-source
+interfaces and use-case contracts.
+
+Children may use explicitly shared ancestor components; parents coordinate their children through public
+operation contracts. Shared business components must not import private child types.
+
+Technical Shared components and shared-business Common components are explicit reuse exceptions.
+Shared is independent of business modules. Common must not depend on private primary-business branches.
+These boundaries apply recursively; all dependency cycles remain prohibited.
+Concrete folder placement belongs to the corresponding layer documentation.
+
 ## Contract Ownership
 
 A dependency interface is defined by the needs of its consuming scenario.
@@ -52,7 +66,7 @@ Organize each layer according to its responsibility.
 One layer's grouping rules do not automatically apply to other layers.
 
 - [Domain](backend/domain.md): the subject model and its organization.
-- [Application](backend/application.md): features, modules, services, dependencies, and shared scenarios.
+- [Application](backend/application.md): recursive modules, services, dependencies, and shared scenarios.
 - [Infrastructure](backend/infrastructure.md): persistence, dependency implementations, and technical constraints.
 - [API](backend/api.md): transport and the composition root.
 - [Frontend](frontend/README.md): a separate plan for client-application organization.

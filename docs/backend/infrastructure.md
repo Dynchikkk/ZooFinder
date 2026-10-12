@@ -7,50 +7,69 @@ and runtime dependency registration are not implemented. Global boundaries are i
 [General architecture](../architecture.md). Placement rules for this layer are defined below;
 tests and migration policy are in [Development rules](../development.md).
 
-## DataSource Placement Rules
+## Implementation Placement Rules
 
-Storage implementations belong to Persistence/DataSources/Features and Persistence/DataSources/Common.
-Under each branch, repeat the Application interface owner's area/module hierarchy.
-Files remain flat in final module folders. Ownership, rather than the queried tables, determines placement.
+Infrastructure has Persistence, Modules, and a future DependencyInjection composition helper.
+There is no separate Common root.
 
-Preserve soft-deletion, publication, and scenario-specific visibility when reading.
-Reuse repeated EF query details within Infrastructure when useful, without copying a complete foreign source.
-This mapping does not impose Application's FSD structure on the rest of Infrastructure.
-DbContext, entity configurations, cursors, and integration implementations follow their technical responsibility.
+Map an Application interface under Modules to the same recursive path in Infrastructure.
+Map Application/Common/<Module>/... to Infrastructure/Modules/<Module>/...
+and merge matching directories without overwriting conflicting files.
+
+```text
+Application/Common/Animals/DataSources/
+    → Infrastructure/Modules/Animals/DataSources/
+
+Application/Common/Animals/Dependencies/AnimalInformation/
+    → Infrastructure/Modules/Animals/Dependencies/AnimalInformation/
+
+Application/Modules/Animals/Modules/Recognition/DataSources/
+    → Infrastructure/Modules/Animals/Modules/Recognition/DataSources/
+```
+
+The interface's Application owner determines business responsibility.
+Physical merging in Infrastructure does not permit sibling dependencies in Application.
+Keep DataSources flat and dependency implementations under Dependencies/<Name>.
+Application services and their contracts remain in Application.
+
+Shared technical Application components generally need no Infrastructure counterpart.
+DbContext, its factory, EF configurations, and database cursors stay under Persistence.
+Preserve visibility and transaction rules when reading/writing through sources.
 
 ## Current Structure
 
 ```text
 ZooFinder.Infrastructure/
+├─ Modules/
+│  ├─ Animals/
+│  │  ├─ DataSources/AnimalRegistrationDataSource.cs
+│  │  └─ Modules/
+│  │     ├─ Catalog/DataSources/AnimalCatalogDataSource.cs
+│  │     └─ Recognition/DataSources/AnimalRecognitionDataSource.cs
+│  ├─ Auth/
+│  │  └─ DataSources/AuthDataSource.cs
+│  ├─ Parks/
+│  │  ├─ DataSources/
+│  │  │  ├─ ParkCatalogDataSource.cs
+│  │  │  └─ ParkAnimalDataSource.cs
+│  │  └─ Modules/
+│  │     └─ Connections/DataSources/ParkConnectionDataSource.cs
+│  ├─ Discussions/
+│  │  └─ DataSources/DiscussionDataSource.cs
+│  └─ Users/
+│     └─ Modules/
+│        └─ Profiles/DataSources/UserProfileDataSource.cs
 └─ Persistence/
    ├─ ZooFinderDbContext.cs
    ├─ ZooFinderDbContextFactory.cs
    ├─ Configurations/
-   ├─ Pagination/DatabaseCursor.cs
-   └─ DataSources/
-      ├─ Features/
-      │  ├─ Animals/
-      │  │  ├─ Catalog/AnimalCatalogDataSource.cs
-      │  │  └─ Recognition/AnimalRecognitionDataSource.cs
-      │  ├─ Parks/
-      │  │  ├─ Catalog/ParkCatalogDataSource.cs
-      │  │  ├─ Animals/ParkAnimalDataSource.cs
-      │  │  └─ Connections/ParkConnectionDataSource.cs
-      │  ├─ Discussions/
-      │  │  └─ Common/DiscussionDataSource.cs
-      │  ├─ Auth/AuthDataSource.cs
-      │  └─ Users/UserProfileDataSource.cs
-      └─ Common/
-         └─ Animals/
-            └─ Registration/AnimalRegistrationDataSource.cs
+   └─ Pagination/DatabaseCursor.cs
 ```
 
-The DataSource path repeats the area/module of the Application interface owner. Recognition's source reads
-parks and memberships but belongs to Animals/Recognition. Common registration belongs to Common/Animals/Registration.
-Files remain flat in each final module folder.
-
-Configurations map Domain entities and remain under `Persistence/Configurations`.
-The context and cursor implementation are shared persistence infrastructure.
+Recognition reads park data through its own source without importing the Parks module.
+Shared registration maps to the Animals parent while catalog/recognition sources keep their child owners.
+Parent-level park/discussion/auth sources stay at their corresponding parent.
+Namespaces match placement; sources explicitly import the shared Persistence context.
 
 ## Implementations
 
@@ -70,8 +89,10 @@ The context and cursor implementation are shared persistence infrastructure.
 | Auth hashing/token interfaces | Security implementations | Pending |
 | `IDiscussionEventPublisher` | Discussion event transport | Pending |
 
-Future provider implementations can mirror their Application owners under Infrastructure `Features` and
-`Common`, using area/module/dependency/component grouping. These branches are not present yet.
+Future provider/security/event implementations follow the same merged-path rule under Dependencies.
+Examples are Modules/Animals/Modules/Recognition/Dependencies/AnimalRecognition,
+Modules/Animals/Dependencies/AnimalInformation, and Modules/Auth/Dependencies/PasswordHashing.
+These implementations and directories are not present yet; do not create empty scaffolding for them.
 HTTP models and provider settings belong to the concrete integration; Application contracts remain in Application.
 The Python model is selected inside Python, without requiring a separate .NET provider for each model.
 

@@ -14,7 +14,7 @@ These documents contain the mandatory rules referenced by [AGENTS.md](../AGENTS.
 
 - [Backend overview](backend/README.md).
     - [Domain](backend/domain.md): entities, relationships, and model constraints.
-    - [Application](backend/application.md): feature-based organization rules, modules, services, data sources, and scenarios.
+    - [Application](backend/application.md): recursive module rules, services, data sources, and shared components.
     - [Infrastructure](backend/infrastructure.md): implemented persistence and planned integrations.
     - [API](backend/api.md): the current scaffold and requirements for the future HTTP layer.
 - [Frontend overview](frontend/README.md).

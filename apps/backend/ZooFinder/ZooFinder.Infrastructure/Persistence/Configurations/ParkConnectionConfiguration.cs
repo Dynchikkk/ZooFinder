@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ZooFinder.Application.Features.Parks.Connections.Constants;
+using ZooFinder.Application.Modules.Parks.Modules.Connections.Constants;
 using ZooFinder.Domain.Parks;
 
 namespace ZooFinder.Infrastructure.Persistence.Configurations;

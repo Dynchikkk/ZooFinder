@@ -5,174 +5,193 @@ It depends on Domain and has no EF, HTTP, SignalR, or dependency-injection frame
 
 **Status:** Eleven services and their contracts are implemented. Infrastructure providers and API wiring
 are still pending. Global layer boundaries are defined in [General architecture](../architecture.md).
-Application-specific placement and cross-feature rules are defined below; formatting is defined in
+Application-specific placement and module-dependency rules are defined below; formatting is defined in
 [Code style](../code-style.md).
 
-## Application Organization Rules
+## Recursive Module Organization
 
-The feature-based (FSD) organization described here applies to Application.
-It is not a required folder structure for Domain, Infrastructure, API, or frontend.
+Application has three root sections:
 
-### Features, Modules, and Common
+- Modules: primary business modules.
+- Common: business functionality genuinely reused across primary modules.
+- Shared: technical Application components independent of business modules.
 
-Top-level features are Animals, Parks, Discussions, Auth, and Users.
-Modules inside one feature may share its sources, contracts, and rules. Feature-local shared functionality
-stays under that feature; it does not move to global Common.
+Modules and Common use the same recursive module structure.
+Every module can directly contain Services, DataSources, Dependencies, Contracts, Validators, Constants,
+Settings, Extensions, Exceptions, and a Modules folder for child modules.
+Create only the folders required by actual components; no empty scaffolding is needed.
 
-Features and Common use the same internal structure. Where an area has modules, placement follows
-area/module/purpose/component. An area that already serves as a standalone module needs no artificial
-extra module. Area/module roots contain purpose folders, not individual C# files.
+Module roots contain purpose folders rather than individual C# files.
+A module may have its own services/sources and child modules at the same time.
+Nesting expresses responsibility, not a requirement to wrap every service in another module.
+Adding a child does not require moving existing parent components.
 
-Module names are brief in their area's context and do not repeat its prefix. Component names remain specific.
-Do not change the agreed structure only to remove repeated words from a path.
+### Ownership and Dependencies
 
-Common contains stable functionality genuinely used by multiple features, including technical modules
-and named subject modules. A single query against another feature's data does not justify a Common module.
-Do not move entire features or private DTOs there.
+Ordinary sibling modules must not import each other's services, data sources, request/response contracts,
+or other private components. A dependency through an interface still counts as a module dependency.
 
-### Names and Component Placement
+A child can use explicitly shared components of its ancestors.
+A parent can coordinate its children through their public operation contracts.
+Shared parent components must not depend on private child types or implementations.
 
-Namespaces match file placement. Entity-based folder/namespace segments are plural, while entity and service
-class names remain singular. Task names remain unchanged. Resolve namespace/type collisions through naming,
-not aliases such as AnimalEntity.
+Common and Shared are explicit exceptions for shared functionality.
+Shared must not depend on Modules or Common.
+Common can use Domain, Shared, and its own components, but cannot import private primary-module functionality.
+All dependency cycles are prohibited.
 
-Each service belongs to Services/<Name>/ with its interface, implementation, and <Name>ServiceContracts.cs.
-The folder name omits the Service suffix. Related requests, responses, and service types share that contracts file.
+Shared Domain types/enums can be used across modules. Reading another module's stored data uses a source
+owned by the consumer; its Infrastructure implementation reads the required Domain entities/projection.
+Preserve visibility and business rules. Do not copy a foreign source or use a new source merely to bypass
+another module's business operation.
 
-Storage interfaces have the DataSource suffix. They serve a coherent scenario, may handle several Domain entities,
-and are not created per table, per method, or automatically per service.
-If an existing source fits a new operation, extend it. Separate sources are appropriate for separate tasks.
+Cross-branch business workflows are coordinated by the nearest common parent or by an appropriate
+shared Common scenario. Do not introduce direct sibling calls, including broad CRUD interfaces.
+Functionality used by children of one parent stays at that parent rather than global Common.
 
-DataSources folders are flat. Optional <Name>DataSourceContracts.cs sits beside the interface.
-Use suitable Domain entities rather than unnecessary DTOs; do not create empty contract files.
+### Components and Names
 
-Providers, hashing, token generation, and publishers belong to Dependencies/<Name>/.
-Each folder holds the interface and its own contracts when needed. Their technical implementations remain
-outside Application. Recognition/information providers retain the Provider suffix.
+Namespaces match placement. Entity-based folder/namespace segments are plural; entity/service classes remain
+singular. Task names remain unchanged. Avoid namespace/type collisions through naming rather than aliases.
 
-Provider/publisher contracts belong to the dependency; it must not import service requests/responses.
-Shared types are defined once according to their purpose. Constants, validators, settings, exceptions,
-and extensions stay in their module's purpose folders.
-Common pagination contracts remain in Common/Pagination/Contracts.
-Separate Interfaces and service Contracts folders are not used.
+Each service is grouped in Services/<Name>/ with its interface, implementation, and service-contract file.
+The folder omits the Service suffix. A service can implement several related use cases; one service per module
+is not mandatory.
 
-### Cross-Feature Access
+DataSources folders stay flat. A source serves a coherent task and can work with several Domain entities.
+Do not create a source per table, method, or service.
+Optional <Name>DataSourceContracts.cs belongs beside the interface.
+Use existing appropriate types and do not create empty contracts or redundant DTOs.
 
-Shared Domain entities/enums may be used across features without depending on another feature's implementation.
+Providers, hashing, token generation, and publishers belong to Dependencies/<Name>/ with their interface and
+own contracts when needed. Implementations remain outside Application.
+Dependency contracts must not import service requests/responses.
+Related constants, validators, settings, and helpers belong to their owner.
 
-For reading another feature's data, define the source in the consuming feature by default.
-Infrastructure reads the required projection/entities through DbContext.
-Do not import a foreign source or another scenario's response just to perform one read.
-Do not copy an entire source or bypass visibility rules.
-
-To change another feature's state or invoke its business operation, use an explicit narrow owner contract
-or an existing shared scenario. A new reading source must not become a way to bypass the owner's business rules.
-
-Business-operation dependencies must be explicit and one-way. Do not call another feature's concrete service
-or consume its full CRUD interface. Resolve cycles through a coordinating scenario or revised ownership.
-A coordinating scenario used by only one feature stays in that feature; stable reused logic may move to Common.
-
-Concrete ownership of information, shared registration, recognition context, and message events is described
-in the scenario sections below.
+Settings are plain configuration classes needed by Application logic; they do not read IConfiguration
+or appsettings.json. Technical connection/transport settings belong to the Infrastructure implementation.
 
 ## Current Structure
 
 ```text
 ZooFinder.Application/
-├─ Common/
-│  ├─ Animals/
-│  │  ├─ Information/
-│  │  │  ├─ Dependencies/AnimalInformation/
-│  │  │  ├─ Constants/
-│  │  │  ├─ Exceptions/
-│  │  │  ├─ Extensions/
-│  │  │  └─ Validators/
-│  │  └─ Registration/
-│  │     ├─ Services/AnimalRegistration/
-│  │     ├─ DataSources/
-│  │     └─ Constants/
-│  ├─ ErrorHandling/Exceptions/
-│  ├─ Language/
+├─ Shared/
+│  ├─ Pagination/
+│  │  ├─ Contracts/
 │  │  ├─ Constants/
-│  │  ├─ Extensions/
-│  │  └─ Validators/
-│  └─ Pagination/
+│  │  └─ Extensions/
+│  ├─ ErrorHandling/Exceptions/
+│  └─ Language/
 │     ├─ Constants/
-│     ├─ Contracts/
+│     ├─ Validators/
 │     └─ Extensions/
-└─ Features/
+├─ Common/
+│  └─ Animals/
+│     ├─ Services/AnimalRegistration/
+│     ├─ DataSources/
+│     ├─ Dependencies/AnimalInformation/
+│     ├─ Constants/
+│     ├─ Validators/
+│     ├─ Extensions/
+│     └─ Exceptions/
+└─ Modules/
    ├─ Animals/
-   │  ├─ Catalog/
-   │  └─ Recognition/
-   ├─ Parks/
-   │  ├─ Catalog/
-   │  ├─ Animals/
-   │  ├─ Import/
-   │  └─ Connections/
-   ├─ Discussions/
-   │  ├─ Common/
-   │  ├─ Rooms/
-   │  └─ Messages/
+   │  └─ Modules/
+   │     ├─ Catalog/
+   │     │  ├─ Services/AnimalCatalog/
+   │     │  └─ DataSources/
+   │     └─ Recognition/
+   │        ├─ Services/AnimalRecognition/
+   │        ├─ DataSources/
+   │        ├─ Dependencies/AnimalRecognition/
+   │        ├─ Constants/
+   │        └─ Validators/
    ├─ Auth/
+   │  ├─ DataSources/
+   │  ├─ Dependencies/
+   │  ├─ Settings/
+   │  ├─ Validators/
+   │  └─ Modules/
+   │     └─ Authentication/
+   │        └─ Services/Auth/
+   ├─ Parks/
+   │  ├─ DataSources/
+   │  ├─ Constants/
+   │  ├─ Validators/
+   │  └─ Modules/
+   │     ├─ Catalog/Services/Parks/
+   │     ├─ Animals/Services/ParkAnimals/
+   │     ├─ Import/
+   │     │  ├─ Services/ParkAnimalImport/
+   │     │  ├─ Constants/
+   │     │  └─ Validators/
+   │     └─ Connections/
+   │        ├─ Services/ParkConnections/
+   │        ├─ DataSources/
+   │        ├─ Constants/
+   │        └─ Validators/
+   ├─ Discussions/
+   │  ├─ DataSources/
+   │  ├─ Validators/
+   │  └─ Modules/
+   │     ├─ Rooms/
+   │     │  ├─ Services/DiscussionRooms/
+   │     │  └─ Validators/
+   │     └─ Messages/
+   │        ├─ Services/DiscussionMessages/
+   │        ├─ Dependencies/DiscussionEvents/
+   │        ├─ Constants/
+   │        └─ Validators/
    └─ Users/
+      └─ Modules/
+         └─ Profiles/
+            ├─ Services/UserProfiles/
+            ├─ DataSources/
+            ├─ Constants/
+            └─ Validators/
 ```
 
-Services are grouped with their interface and contracts. For example:
+The existing AuthService stays intact under Authentication, including registration, login, refresh,
+and revocation. There is no separate Sessions module or split service implementation at this stage.
 
-```text
-Features/Animals/Recognition/
-├─ Services/AnimalRecognition/
-│  ├─ IAnimalRecognitionService.cs
-│  ├─ AnimalRecognitionService.cs
-│  └─ AnimalRecognitionServiceContracts.cs
-├─ Dependencies/AnimalRecognition/
-│  ├─ IAnimalRecognitionProvider.cs
-│  └─ AnimalRecognitionProviderContracts.cs
-├─ DataSources/
-│  ├─ IAnimalRecognitionDataSource.cs
-│  └─ AnimalRecognitionDataSourceContracts.cs
-├─ Constants/AnimalRecognitionConstraints.cs
-└─ Validators/AnimalRecognitionValidator.cs
-```
+Common/Animals directly contains shared registration and information support.
+A separate Registration/Information module wrapper is not required for these components.
 
-Other service folders are `AnimalCatalog`, `AnimalRegistration`, `Parks`, `ParkAnimals`,
-`ParkAnimalImport`, `ParkConnections`, `Auth`, `UserProfiles`, `DiscussionRooms`, and `DiscussionMessages`.
-There are no separate `Interfaces` or service-level `Contracts` directories.
+## Data Sources and Shared Parent Components
 
-## Data Sources
-
-A DataSource defines storage operations needed by a scenario; it may work with several Domain entities.
-Infrastructure implements these interfaces. An interface is not required for every entity or every method.
-
-| Module | Interface | Responsibility |
+| Owner | Interface | Responsibility |
 | --- | --- | --- |
-| Animals/Catalog | `IAnimalCatalogDataSource` | Local catalog search and sourced identity lookup |
-| Animals/Recognition | `IAnimalRecognitionDataSource` | Park state and published recognition context |
-| Parks/Catalog | `IParkCatalogDataSource` | Park catalog and state changes |
-| Parks/Animals | `IParkAnimalDataSource` | Park membership reads, upserts, removal, and batch apply |
-| Parks/Connections | `IParkConnectionDataSource` | Requests and conditional state transitions |
-| Discussions/Common | `IDiscussionDataSource` | Rooms, messages, and accounts needed by discussions |
-| Auth | `IAuthDataSource` | Account registration and refresh-session operations |
-| Users | `IUserProfileDataSource` | Profile reads and updates |
-| Common/Animals/Registration | `IAnimalRegistrationDataSource` | Atomic shared Animal/General-room registration |
+| Modules/Animals/Modules/Catalog | IAnimalCatalogDataSource | Local catalog search/identity |
+| Modules/Animals/Modules/Recognition | IAnimalRecognitionDataSource | Park state and published recognition context |
+| Modules/Parks | IParkCatalogDataSource | Park reads/state and shared guards |
+| Modules/Parks | IParkAnimalDataSource | Membership operations used by Animals and Import |
+| Modules/Parks/Modules/Connections | IParkConnectionDataSource | Connection requests/transitions |
+| Modules/Discussions | IDiscussionDataSource | Shared room/message/account operations |
+| Modules/Auth | IAuthDataSource | Account/refresh-session storage used by Authentication |
+| Modules/Users/Modules/Profiles | IUserProfileDataSource | Profile reads/updates |
+| Common/Animals | IAnimalRegistrationDataSource | Atomic shared Animal/General registration |
 
-`ParkRecognitionContextResult` and `ParkRecognitionAnimalResult` are declared beside the recognition
-DataSource interface. Other sources use Domain entities and existing appropriate types where sufficient;
-empty contract files are not created.
+ParkValidator and ParkAnimalValidator remain at Parks: catalog, membership, connection, and import scenarios
+reuse their respective checks. Import/connection-only validators and constraints belong to those child modules.
+DiscussionUserValidator and IDiscussionDataSource stay at Discussions; room/message-specific components
+belong to Rooms/Messages.
 
-Required atomic operations are explicit DataSource methods. Application has no general-purpose UnitOfWork.
+These parent-owned components avoid sibling imports without pushing module-local functionality into Common.
+DataSource contracts remain adjacent to their interface.
+Atomic operations are explicit source methods; no general-purpose UnitOfWork is introduced.
 
 ## Shared Animal Information and Registration
 
-`Common/Animals/Information` owns normalization, validation, constraints, the provider interface,
+`Common/Animals` owns shared information normalization, validation, constraints, the provider interface,
 provider contracts, and `AnimalInformationUnavailableException`. Language handling belongs to
-`Common/Language`; supported codes are `en` and `ru`.
+`Shared/Language`; supported codes are `en` and `ru`.
 
 `IAnimalInformationProvider` exposes `SearchAsync` and `GetDetailsAsync`.
 Its identity is `InformationSource + SourceItemId + LanguageCode`; results include `SourceUrl`.
+The interface and provider contracts are grouped under Common/Animals/Dependencies/AnimalInformation.
 
-`Common/Animals/Registration` owns `AnimalRegistrationService`, its interface and service contracts,
-`IAnimalRegistrationDataSource`, and `AnimalRegistrationDefaults`.
+`Common/Animals/Services/AnimalRegistration` contains `AnimalRegistrationService`, its interface and service contracts;
+`IAnimalRegistrationDataSource` and `AnimalRegistrationDefaults` belong to the area's DataSources and Constants folders.
 
 `RegisterAsync` accepts either `RegisterAnimalRequest` or previously retrieved
 `AnimalInformationDetailsResult`. Exact existing source identity can be reused without a provider call.
@@ -180,7 +199,7 @@ Otherwise the service retrieves or validates details and delegates atomic card/r
 
 Matching checks source identity, scientific name, then normalized title within the same language.
 Ambiguous matches and conflicting scientific names produce a conflict. Reuse retains canonical stored identity.
-The service returns `AnimalRegistrationResult(AnimalId, GeneralRoomId)`, not another feature's response.
+The service returns `AnimalRegistrationResult(AnimalId, GeneralRoomId)`, rather than another module's response.
 
 Both Parks and Discussions use this scenario. First registration creates an Animal and an empty General room;
 later registration reuses them. The shared card and discussion may exist without any park membership.
@@ -216,6 +235,7 @@ for canonical names and park-membership IDs. A known animal's missing scientific
 falling back to a provider-supplied name.
 
 With `ParkId`, `IAnimalRecognitionDataSource.GetParkContextAsync` loads park status and published memberships.
+Its interface and context contracts are in Modules/Animals/Modules/Recognition/DataSources.
 Unknown parks produce not-found; suspended parks produce conflict. No park or an empty published catalog
 produces an empty candidate list and general recognition.
 
@@ -241,7 +261,7 @@ The client follows up through Catalog or a park card. Concrete HTTP/Python infer
 ## Parks
 
 All park operations are open to everyone in v1: no required user ID, ownership/role check, or payment gate.
-Existing account and discussion-message rules still apply to those existing features.
+Existing account and discussion-message rules still apply to those existing modules.
 
 | Service | Operations |
 | --- | --- |
@@ -284,7 +304,7 @@ updates change the authenticated active account's display name. Normalized names
 Its dependency interfaces are grouped under:
 
 ```text
-Features/Auth/Dependencies/
+Modules/Auth/Dependencies/
 ├─ PasswordHashing/IPasswordHasher.cs
 ├─ AccessToken/IAccessTokenProvider.cs
 ├─ RefreshTokenGeneration/IRefreshTokenGenerator.cs
@@ -304,9 +324,9 @@ Concrete hashing, token-generation, and access-token implementations remain pend
 
 ## Discussions
 
-`Features/Discussions/Common` owns the shared DataSource and account-write validation.
-`Rooms` owns `DiscussionRoomService`; `Messages` owns `DiscussionMessageService`, message constraints,
-validation, and `Dependencies/DiscussionEvents`.
+Modules/Discussions owns shared DataSources and account validation.
+Modules/Rooms contains DiscussionRoomService and its validator.
+Modules/Messages contains DiscussionMessageService, message constraints/validation, and Dependencies/DiscussionEvents.
 
 Room operations retrieve a General room or create/reuse it through shared registration.
 Explicit discussion creation requires an active account. Automatic registration by Parks does not.
@@ -327,8 +347,9 @@ Offset pages are zero-based; defaults are page 0, page size 20, and maximum size
 Cursor contracts are `CursorPageRequest` and `CursorPageResponse<T>`; cursors are opaque to Application clients.
 Local catalog search and message history use cursor pagination; provider cursors have provider-owned semantics.
 
-Shared exceptions are `RequestValidationException`, `NotFoundException`, `ConflictException`,
-`UnauthorizedException`, and `ForbiddenException`. API exception mapping remains pending.
+Shared/ErrorHandling owns `RequestValidationException`, `NotFoundException`, `ConflictException`,
+`UnauthorizedException`, and `ForbiddenException`. Pagination contracts/constants/extensions are under Shared/Pagination.
+API exception mapping remains pending.
 
 ## Composition and Verification
 

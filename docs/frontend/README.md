@@ -19,7 +19,7 @@ The product sequence is described in the [roadmap](../planning/parks-and-recogni
 Parks work without a species list. New park-management and connection screens are available to everyone in v1.
 Existing account/message-write requirements remain applicable to their own screens.
 
-## Suggested Feature Organization
+## Suggested Module Organization
 
 The following is a proposed layout, not an existing or separately finalized frontend architecture:
 
@@ -27,22 +27,24 @@ The following is a proposed layout, not an existing or separately finalized fron
 src/app/
 ├─ core/
 ├─ shared/
-└─ features/
+└─ modules/
    ├─ animals/
-   │  ├─ catalog/
-   │  └─ recognition/
+   │  └─ modules/
+   │     ├─ catalog/
+   │     └─ recognition/
    ├─ parks/
-   │  ├─ catalog/
-   │  ├─ animals/
-   │  ├─ import/
-   │  └─ connections/
+   │  └─ modules/
+   │     ├─ catalog/
+   │     ├─ animals/
+   │     ├─ import/
+   │     └─ connections/
    ├─ auth/
    ├─ users/
    └─ discussions/
 ```
 
 Core handles application-wide composition/session infrastructure; shared contains reusable presentation
-components. Business UI belongs to features. Final Angular setup and component conventions will be chosen
+components. Business UI is grouped by modules. Final Angular setup and component conventions will be chosen
 when frontend implementation starts.
 
 ## API Boundary and Display Rules
