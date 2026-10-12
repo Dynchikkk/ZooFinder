@@ -23,7 +23,8 @@ public static class ParkValidator
         }
 
         if (slug.Length == 0 || slug.Length > ParkConstraints.MaximumSlugLength || slug[0] == '-' || slug[^1] == '-' ||
-            slug.Any(character => !(character is >= 'a' and <= 'z' or >= '0' and <= '9' or '-')))
+            slug.Any(character => !((character >= 'a' && character <= 'z') ||
+                (character >= '0' && character <= '9') || character == '-')))
         {
             throw new RequestValidationException("Park slug must contain lowercase Latin letters, digits or hyphens.");
         }
@@ -37,7 +38,7 @@ public static class ParkValidator
 
     public static void ValidateStatus(ParkStatus status)
     {
-        if (status is not (ParkStatus.Active or ParkStatus.Suspended))
+        if (status != ParkStatus.Active && status != ParkStatus.Suspended)
         {
             throw new RequestValidationException("Park status is invalid.");
         }

@@ -137,7 +137,7 @@ public sealed class ParkConnectionService : IParkConnectionService
     public async Task<ParkConnectionResponse> CloseAsync(CloseParkConnectionRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (request.Status is not (ParkConnectionStatus.Rejected or ParkConnectionStatus.Cancelled))
+        if (request.Status != ParkConnectionStatus.Rejected && request.Status != ParkConnectionStatus.Cancelled)
         {
             throw new RequestValidationException("Closing status must be Rejected or Cancelled.");
         }
@@ -150,7 +150,7 @@ public sealed class ParkConnectionService : IParkConnectionService
                 connection.Contact, connection.AgreedAmount, connection.Currency, connection.PaidAtUtc, connection.Comment);
         }
 
-        if (connection.Status is not (ParkConnectionStatus.Submitted or ParkConnectionStatus.AwaitingPayment))
+        if (connection.Status != ParkConnectionStatus.Submitted && connection.Status != ParkConnectionStatus.AwaitingPayment)
         {
             throw new ConflictException("Completed requests cannot be closed again.");
         }

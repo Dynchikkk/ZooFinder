@@ -67,7 +67,9 @@ public sealed class ParkAnimalImportService : IParkAnimalImportService
                         details.LanguageCode, details.Title, details.ScientificName, description), null));
             }
             catch (Exception exception) when (
-                exception is RequestValidationException or NotFoundException or AnimalInformationUnavailableException)
+                (exception as RequestValidationException) != null ||
+                (exception as NotFoundException) != null ||
+                (exception as AnimalInformationUnavailableException) != null)
             {
                 results.Add(new ParkAnimalImportRowResponse(index, null, exception.Message));
             }

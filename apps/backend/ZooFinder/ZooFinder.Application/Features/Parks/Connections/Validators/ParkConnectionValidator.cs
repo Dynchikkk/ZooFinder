@@ -31,7 +31,7 @@ public static class ParkConnectionValidator
             throw new RequestValidationException("Amount must be non-negative and have at most two decimal places.");
         }
 
-        if (currency.Length != 3 || currency.Any(character => character is < 'A' or > 'Z'))
+        if (currency.Length != 3 || currency.Any(character => character < 'A' || character > 'Z'))
         {
             throw new RequestValidationException("Currency must be a three-letter code.");
         }

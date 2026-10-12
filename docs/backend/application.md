@@ -128,9 +128,11 @@ Features/Animals/Recognition/
 ├─ Dependencies/AnimalRecognition/
 │  ├─ IAnimalRecognitionProvider.cs
 │  └─ AnimalRecognitionProviderContracts.cs
-└─ DataSources/
-   ├─ IAnimalRecognitionDataSource.cs
-   └─ AnimalRecognitionDataSourceContracts.cs
+├─ DataSources/
+│  ├─ IAnimalRecognitionDataSource.cs
+│  └─ AnimalRecognitionDataSourceContracts.cs
+├─ Constants/AnimalRecognitionConstraints.cs
+└─ Validators/AnimalRecognitionValidator.cs
 ```
 
 Other service folders are `AnimalCatalog`, `AnimalRegistration`, `Parks`, `ParkAnimals`,
@@ -205,6 +207,13 @@ The service accepts an image stream, file name, content type, declared length, l
 and optional `ParkId`. Application checks readability, file-name length, the 10 MiB declared-length limit,
 language, and provider-result consistency. Actual file-size/signature/decode checks belong to the future
 upload boundary and model adapter.
+
+`AnimalRecognitionService` coordinates request normalization, park-context loading, provider invocation,
+result validation, and response mapping. `AnimalRecognitionConstraints` owns the image and file-name limits;
+`AnimalRecognitionValidator` checks the request, park ID, main candidate, alternatives, and execution metadata.
+The service maps the main candidate and alternatives through the same helper, using one lookup of park animals
+for canonical names and park-membership IDs. A known animal's missing scientific name remains null rather than
+falling back to a provider-supplied name.
 
 With `ParkId`, `IAnimalRecognitionDataSource.GetParkContextAsync` loads park status and published memberships.
 Unknown parks produce not-found; suspended parks produce conflict. No park or an empty published catalog

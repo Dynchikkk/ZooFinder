@@ -1,25 +1,26 @@
 using ZooFinder.Application.Common.ErrorHandling.Exceptions;
 using ZooFinder.Application.Common.Language.Extensions;
-using ZooFinder.Application.Common.Language.Validators;
 using ZooFinder.Application.Features.Animals.Recognition.DataSources;
 using ZooFinder.Application.Features.Animals.Recognition.Dependencies.AnimalRecognition;
+using ZooFinder.Application.Features.Animals.Recognition.Validators;
 using ZooFinder.Domain.Parks;
 
 namespace ZooFinder.Application.Features.Animals.Recognition.Services.AnimalRecognition;
 
 public sealed class AnimalRecognitionService : IAnimalRecognitionService
 {
-    private const long MaximumImageLength = 10 * 1024 * 1024;
-    private const int MaximumFileNameLength = 255;
-    private readonly IAnimalRecognitionProvider _provider;
-    private readonly IAnimalRecognitionDataSource _parks;
+    private readonly IAnimalRecognitionProvider _animalRecognitionProvider;
+    private readonly IAnimalRecognitionDataSource _animalRecognitionDataSource;
 
-    public AnimalRecognitionService(IAnimalRecognitionProvider provider, IAnimalRecognitionDataSource parks)
+    public AnimalRecognitionService(
+        IAnimalRecognitionProvider animalRecognitionProvider,
+        IAnimalRecognitionDataSource animalRecognitionDataSource)
     {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(parks);
-        _provider = provider;
-        _parks = parks;
+        ArgumentNullException.ThrowIfNull(animalRecognitionProvider);
+        ArgumentNullException.ThrowIfNull(animalRecognitionDataSource);
+
+        _animalRecognitionProvider = animalRecognitionProvider;
+        _animalRecognitionDataSource = animalRecognitionDataSource;
     }
 
     public async Task<AnimalRecognitionResponse> RecognizeAsync(
@@ -27,146 +28,87 @@ public sealed class AnimalRecognitionService : IAnimalRecognitionService
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
         string fileName = request.FileName?.Trim() ?? string.Empty;
         string contentType = request.ContentType?.Trim().ToLowerInvariant() ?? string.Empty;
-        string language = request.LanguageCode.NormalizeLanguageCode();
-        if (request.ImageStream == null || !request.ImageStream.CanRead)
-        {
-            throw new RequestValidationException("Image stream must be readable.");
-        }
+        string languageCode = request.LanguageCode.NormalizeLanguageCode();
 
-        if (fileName.Length == 0 || fileName.Length > MaximumFileNameLength)
-        {
-            throw new RequestValidationException("Image file name length is invalid.");
-        }
+        AnimalRecognitionValidator.ValidateRequest(request.ImageStream, fileName, request.Length, languageCode);
 
-        if (request.Length < 1 || request.Length > MaximumImageLength)
-        {
-            throw new RequestValidationException("Image length is invalid.");
-        }
-
-        LanguageCodeValidator.Validate(language);
-
-        IReadOnlyList<ParkRecognitionAnimalResult> animals = [];
-        if (request.ParkId.HasValue)
-        {
-            if (request.ParkId.Value == Guid.Empty)
-            {
-                throw new RequestValidationException("Park ID must not be empty.");
-            }
-
-            var park = await _parks.GetParkContextAsync(request.ParkId.Value, cancellationToken)
-                ?? throw new NotFoundException("Park was not found.");
-            if (park.Status != ParkStatus.Active)
-            {
-                throw new ConflictException("Park is suspended.");
-            }
-
-            animals = park.Animals;
-        }
-
+        var animals = await GetParkAnimalsAsync(request.ParkId, cancellationToken);
         var candidates = animals
             .Select(animal => new AnimalRecognitionContextCandidate(animal.AnimalId, animal.CommonName, animal.ScientificName))
             .ToArray();
-        var result = await _provider.RecognizeAsync(new AnimalRecognitionProviderRequest(
-            request.ImageStream, contentType, language, candidates), cancellationToken)
+        var providerRequest = new AnimalRecognitionProviderRequest(request.ImageStream, contentType, languageCode, candidates);
+
+        var result = await _animalRecognitionProvider.RecognizeAsync(providerRequest, cancellationToken)
             ?? throw new InvalidOperationException("Recognition provider returned no result.");
-        ValidateResult(result, candidates);
-        var links = animals.ToDictionary(animal => animal.AnimalId, animal => animal.ParkAnimalId);
-        var names = candidates.ToDictionary(candidate => candidate.AnimalId);
-        return new AnimalRecognitionResponse(result.Status,
-            GetCommonName(result.AnimalId, result.CommonName, names),
-            GetScientificName(result.AnimalId, result.ScientificName, names),
-            result.Alternatives
-                .Select(candidate => new AnimalRecognitionCandidateResponse(
-                    GetCommonName(candidate.AnimalId, candidate.CommonName, names),
-                    GetScientificName(candidate.AnimalId, candidate.ScientificName, names),
-                    GetLink(candidate.AnimalId, links)))
-                .ToArray(),
-            GetLink(result.AnimalId, links), result.Execution);
+
+        AnimalRecognitionValidator.ValidateResult(result, candidates);
+
+        return CreateResponse(result, animals);
     }
 
-    private static void ValidateResult(
+    private async Task<IReadOnlyList<ParkRecognitionAnimalResult>> GetParkAnimalsAsync(
+        Guid? parkId,
+        CancellationToken cancellationToken)
+    {
+        if (!parkId.HasValue)
+        {
+            return [];
+        }
+
+        AnimalRecognitionValidator.ValidateParkId(parkId.Value);
+
+        var park = await _animalRecognitionDataSource.GetParkContextAsync(parkId.Value, cancellationToken)
+            ?? throw new NotFoundException("Park was not found.");
+
+        if (park.Status != ParkStatus.Active)
+        {
+            throw new ConflictException("Park is suspended.");
+        }
+
+        return park.Animals;
+    }
+
+    private static AnimalRecognitionResponse CreateResponse(
         AnimalRecognitionProviderResult result,
-        IReadOnlyList<AnimalRecognitionContextCandidate> context)
+        IReadOnlyList<ParkRecognitionAnimalResult> animals)
     {
-        if (!Enum.IsDefined(result.Status) || result.Alternatives == null)
-        {
-            throw new InvalidOperationException("Recognition provider returned an invalid status or alternatives.");
-        }
+        var animalsById = animals.ToDictionary(animal => animal.AnimalId);
+        var recognizedAnimal = CreateCandidateResponse(result.AnimalId, result.CommonName, result.ScientificName, animalsById);
+        var alternatives = result.Alternatives
+            .Select(candidate => CreateCandidateResponse(
+                candidate.AnimalId, candidate.CommonName, candidate.ScientificName, animalsById))
+            .ToArray();
 
-        var validIds = context
-            .Select(candidate => candidate.AnimalId)
-            .ToHashSet();
-        if (result.Status == AnimalRecognitionStatus.Recognized && string.IsNullOrWhiteSpace(result.CommonName) &&
-            string.IsNullOrWhiteSpace(result.ScientificName) &&
-            !result.AnimalId.HasValue)
-        {
-            throw new InvalidOperationException("Recognized animal has no name or context ID.");
-        }
-
-        if (result.AnimalId.HasValue && !validIds.Contains(result.AnimalId.Value))
-        {
-            throw new InvalidOperationException("Recognition provider returned an ID outside the park context.");
-        }
-
-        if (result.Status == AnimalRecognitionStatus.NoAnimal &&
-            (result.AnimalId.HasValue || !string.IsNullOrWhiteSpace(result.CommonName) ||
-            !string.IsNullOrWhiteSpace(result.ScientificName) || result.Alternatives.Count > 0))
-        {
-            throw new InvalidOperationException("NoAnimal result contains animal candidates.");
-        }
-
-        var seenIds = new HashSet<Guid>();
-        if (result.AnimalId.HasValue)
-        {
-            seenIds.Add(result.AnimalId.Value);
-        }
-
-        foreach (var alternative in result.Alternatives)
-        {
-            if (alternative == null || (string.IsNullOrWhiteSpace(alternative.CommonName) &&
-                string.IsNullOrWhiteSpace(alternative.ScientificName) && !alternative.AnimalId.HasValue))
-            {
-                throw new InvalidOperationException("Recognition alternative is empty.");
-            }
-
-            if (alternative.AnimalId.HasValue &&
-                (!validIds.Contains(alternative.AnimalId.Value) || !seenIds.Add(alternative.AnimalId.Value)))
-            {
-                throw new InvalidOperationException("Recognition alternative contains an invalid or duplicate ID.");
-            }
-        }
-
-        if (result.Execution != null && (string.IsNullOrWhiteSpace(result.Execution.ModelId) ||
-            !double.IsFinite(result.Execution.InferenceMilliseconds) || result.Execution.InferenceMilliseconds < 0))
-        {
-            throw new InvalidOperationException("Recognition execution metadata is invalid.");
-        }
+        return new AnimalRecognitionResponse(
+            result.Status,
+            recognizedAnimal.CommonName,
+            recognizedAnimal.ScientificName,
+            alternatives,
+            recognizedAnimal.ParkAnimalId,
+            result.Execution);
     }
 
-    private static Guid? GetLink(Guid? animalId, IReadOnlyDictionary<Guid, Guid> links)
+    private static AnimalRecognitionCandidateResponse CreateCandidateResponse(
+        Guid? animalId,
+        string? commonName,
+        string? scientificName,
+        IReadOnlyDictionary<Guid, ParkRecognitionAnimalResult> animalsById)
     {
-        return animalId.HasValue && links.TryGetValue(animalId.Value, out Guid linkId) ? linkId : null;
+        if (animalId.HasValue)
+        {
+            var animal = animalsById[animalId.Value];
+
+            return new AnimalRecognitionCandidateResponse(
+                NormalizeName(animal.CommonName), NormalizeName(animal.ScientificName), animal.ParkAnimalId);
+        }
+
+        return new AnimalRecognitionCandidateResponse(NormalizeName(commonName), NormalizeName(scientificName));
     }
 
-    private static string? GetCommonName(
-        Guid? id,
-        string? name,
-        IReadOnlyDictionary<Guid, AnimalRecognitionContextCandidate> context)
-    {
-        return id.HasValue ? Normalize(context[id.Value].CommonName) : Normalize(name);
-    }
-
-    private static string? GetScientificName(
-        Guid? id,
-        string? name,
-        IReadOnlyDictionary<Guid, AnimalRecognitionContextCandidate> context)
-    {
-        return id.HasValue ? Normalize(context[id.Value].ScientificName) : Normalize(name);
-    }
-
-    private static string? Normalize(string? value)
+    private static string? NormalizeName(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }

@@ -32,6 +32,24 @@ var animalNames = animals
 var hasAnimals = animals.Any();
 ```
 
+## Conditions
+
+Use ordinary comparison operators (`==`, `!=`, `<`, `<=`, `>`, `>=`) and logical operators (`&&`, `||`, `!`)
+in boolean expressions. Do not use `is` expressions or pattern combinators (`and`, `or`, `not`) for conditions.
+This applies to `if`, loop conditions, ternary conditions, LINQ predicates, and `catch` filters.
+
+For reference-type checks, use an `as` cast with an explicit null comparison when needed,
+preserving matching for derived types.
+
+```csharp
+if (status != ParkStatus.Active && status != ParkStatus.Suspended)
+{
+    throw new RequestValidationException("Park status is invalid.");
+}
+
+bool isUppercaseLatin = character >= 'A' && character <= 'Z';
+```
+
 ## Braces
 
 Use braces for every `if` branch, including `else` and `else if`, even when the body contains only one statement.
