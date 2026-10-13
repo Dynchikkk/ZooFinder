@@ -83,7 +83,10 @@ Rules:
 
 `Park` contains `Name`, unique `Slug`, optional `Description`/`Address`, `Status`, and optional `OwnerUserAccountId` metadata. Status values are `Active` and `Suspended`; a new park is immediately active without an owner, species list, or payment. No owner/role authorization is applied to park operations in v1.
 
-`ParkAnimal` contains `ParkId`, `AnimalId`, optional `LocalDescription`, and `IsPublished`. `(ParkId, AnimalId)` is unique. It represents membership of a shared species, not an individual animal. Removing or editing membership does not change the shared animal or chat. Re-adding restores the existing association.
+`ParkAnimal` contains `ParkId`, `AnimalId`, optional `LocalDescription`, and `IsPublished`. `(ParkId, AnimalId)` is unique.
+It represents membership of a shared species, not an individual animal. Removing or editing membership does not
+change the shared animal or chat. Re-adding restores a deleted association with its original ID and the supplied
+local fields. An already active association is returned unchanged; its local fields are changed by explicit editing.
 
 `ParkConnectionRequest` contains `ParkId`, optional contact information/comment, `Status`, `AgreedAmount`, `Currency`, and `PaidAtUtc`. Only one unfinished request per park is allowed. Transitions are `Submitted → AwaitingPayment → Activated`; `Submitted`/`AwaitingPayment` may become `Rejected` or `Cancelled`. Approval records the price and currency; payment confirmation records UTC time. These states never control park availability in v1.
 

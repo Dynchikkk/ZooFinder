@@ -93,7 +93,7 @@ public sealed class ParkAnimalImportService : IParkAnimalImportService
             });
         }
 
-        var savedParkAnimals = await _parkAnimalDataSource.UpsertBatchAsync(request.ParkId, parkAnimals, cancellationToken);
+        var savedParkAnimals = await _parkAnimalDataSource.AddOrRestoreBatchAsync(request.ParkId, parkAnimals, cancellationToken);
         var parkAnimalIds = savedParkAnimals
             .Select(parkAnimal => parkAnimal.Id)
             .ToArray();

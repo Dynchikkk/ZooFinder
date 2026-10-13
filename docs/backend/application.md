@@ -303,10 +303,15 @@ A null provider result also leaves cached details available. Cancellation and pr
 silently treated as provider unavailability.
 Membership lists use cached data and do not call Wiki for every row.
 
+Membership addition uses `AddOrRestoreAsync`; imports use `AddOrRestoreBatchAsync` with the same rules.
+New links use the supplied local description/publication. Deleted links retain their ID and are restored with
+the supplied local fields. Existing active links are returned unchanged; editing requires `UpdateAsync`.
+
 Imports accept decoded rows, up to 200. CSV parsing is not implemented.
 Preview performs no writes and requires an unambiguous exact match or explicit source identity.
 Apply validates and retrieves selected details again, registers shared cards/rooms, then applies the
-membership batch in one transaction. Repeated imports reuse membership IDs.
+membership batch through one SaveChanges transaction. Repeated imports reuse membership IDs and preserve
+active links' local descriptions and publication flags; deleted links are restored with the selected values.
 
 Shared registration occurs in separate transactions before membership apply. Those cards/rooms may remain
 if the link batch later fails. This is not a transaction covering the whole import.

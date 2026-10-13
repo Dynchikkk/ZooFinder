@@ -1,4 +1,3 @@
-using System.Data;
 using Microsoft.EntityFrameworkCore;
 using ZooFinder.Application.Modules.Parks.DataSources;
 using ZooFinder.Application.Shared.ErrorHandling.Exceptions;
@@ -54,23 +53,20 @@ public sealed class ParkAnimalDataSource : IParkAnimalDataSource
         return new OffsetPageResponse<ParkAnimal>(parkAnimals, pageRequest.Page, pageRequest.PageSize, count);
     }
 
-    public async Task<ParkAnimal> UpsertAsync(ParkAnimal parkAnimal, CancellationToken cancellationToken)
+    public async Task<ParkAnimal> AddOrRestoreAsync(ParkAnimal parkAnimal, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(parkAnimal);
 
-        var parkAnimals = await UpsertBatchAsync(parkAnimal.ParkId, [parkAnimal], cancellationToken);
+        var parkAnimals = await AddOrRestoreBatchAsync(parkAnimal.ParkId, [parkAnimal], cancellationToken);
         return parkAnimals[0];
     }
 
-    public async Task<IReadOnlyList<ParkAnimal>> UpsertBatchAsync(
+    public async Task<IReadOnlyList<ParkAnimal>> AddOrRestoreBatchAsync(
         Guid parkId,
         IReadOnlyList<ParkAnimal> parkAnimals,
         CancellationToken cancellationToken)
     {
         Guid[] animalIds = GetBatchAnimalIds(parkId, parkAnimals);
-
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
-            IsolationLevel.Serializable, cancellationToken);
 
         if (!await _dbContext.Parks.AnyAsync(park => park.Id == parkId, cancellationToken))
         {
@@ -101,10 +97,9 @@ public sealed class ParkAnimalDataSource : IParkAnimalDataSource
                     if (parkAnimal.IsDeleted)
                     {
                         _dbContext.Restore(parkAnimal);
+                        parkAnimal.LocalDescription = requestedParkAnimal.LocalDescription;
+                        parkAnimal.IsPublished = requestedParkAnimal.IsPublished;
                     }
-
-                    parkAnimal.LocalDescription = requestedParkAnimal.LocalDescription;
-                    parkAnimal.IsPublished = requestedParkAnimal.IsPublished;
                 }
                 else
                 {
@@ -125,7 +120,6 @@ public sealed class ParkAnimalDataSource : IParkAnimalDataSource
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
             return savedParkAnimals;
         }
         catch (DbUpdateConcurrencyException)
@@ -138,8 +132,6 @@ public sealed class ParkAnimalDataSource : IParkAnimalDataSource
     {
         ArgumentNullException.ThrowIfNull(parkAnimal);
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
-            IsolationLevel.RepeatableRead, cancellationToken);
         ParkAnimal? existingParkAnimal = await _dbContext.ParkAnimals
             .SingleOrDefaultAsync(existing => existing.Id == parkAnimal.Id, cancellationToken);
 
@@ -154,7 +146,6 @@ public sealed class ParkAnimalDataSource : IParkAnimalDataSource
         try
         {
             await _dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
             parkAnimal.UpdatedAtUtc = existingParkAnimal.UpdatedAtUtc;
         }
         catch (DbUpdateConcurrencyException)
@@ -165,8 +156,6 @@ public sealed class ParkAnimalDataSource : IParkAnimalDataSource
 
     public async Task RemoveAsync(Guid parkAnimalId, CancellationToken cancellationToken)
     {
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
-            IsolationLevel.RepeatableRead, cancellationToken);
         ParkAnimal? parkAnimal = await _dbContext.ParkAnimals
             .SingleOrDefaultAsync(existing => existing.Id == parkAnimalId, cancellationToken);
 
@@ -180,7 +169,6 @@ public sealed class ParkAnimalDataSource : IParkAnimalDataSource
         try
         {
             await _dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {

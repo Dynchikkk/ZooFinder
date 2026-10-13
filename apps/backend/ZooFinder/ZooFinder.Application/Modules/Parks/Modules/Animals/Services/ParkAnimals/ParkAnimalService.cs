@@ -83,7 +83,7 @@ public sealed class ParkAnimalService : IParkAnimalService
             IsPublished = request.IsPublished
         };
 
-        ParkAnimal savedParkAnimal = await _parkAnimalDataSource.UpsertAsync(parkAnimal, cancellationToken);
+        ParkAnimal savedParkAnimal = await _parkAnimalDataSource.AddOrRestoreAsync(parkAnimal, cancellationToken);
         return ToResponse(savedParkAnimal);
     }
 

@@ -80,7 +80,7 @@ AnimalRecognitionService
 Park species addition / import apply / explicit discussion creation
     → IAnimalRegistrationService
     → reuse or create shared Animal + General room
-    → park operation upserts its ParkAnimal association
+    → park operation adds or restores its ParkAnimal association
 
 DiscussionMessageService
     → persist message through IDiscussionDataSource

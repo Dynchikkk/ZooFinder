@@ -163,15 +163,19 @@ Global filters hide deleted rows. Related visibility filters hide profiles/sessi
 rooms/messages of deleted animals or rooms, memberships of deleted parks/animals, and requests of deleted parks.
 Filtering does not modify or cascade-delete child rows. Unique identities remain reserved.
 
-Membership upsert restores a deleted association with its original ID and changes local description/publication.
+Membership addition creates a missing association or restores a deleted one with its original ID and the supplied
+local description/publication. Existing active associations are returned unchanged; UpdateAsync edits their local fields.
 It does not delete, recreate, or edit the shared animal or room. Recognition context excludes unpublished links;
 Application rejects a suspended park after reading its status.
 
 History queries bypass filters to retain deleted messages and author information, then reapply room/animal
 visibility. Application hides deleted content by returning null. Deleted authors do not erase history.
 
-Write queries apply activity/visibility predicates before changing tracked rows. Related-row checks are protected
-by short RepeatableRead transactions; queries alone and concurrency tokens on a child row do not protect its parents.
+Write queries apply activity/visibility predicates before changing tracked rows. Auth, profile, message, and connection
+writes use explicit transactions for related-row checks. Membership writes use the default SaveChanges transaction;
+their prior park/animal checks do not lock parent rows until saving. A parent can be soft-deleted after the check,
+while a membership write still succeeds; global filters then hide that association. A child concurrency token does
+not protect its parents.
 Sources do not use physical ExecuteDelete or raw SQL deletes.
 
 ## Atomic Operations and Concurrency
@@ -188,22 +192,24 @@ Sources do not use physical ExecuteDelete or raw SQL deletes.
   Deleted cards or General rooms produce a conflict. The operation returns an existing room, adds a missing
   room to the matched card, or creates both records. Storage errors end the operation; registration does not
   recover through a second lookup after a failed write.
-- Park slug reservation and membership batches use serializable transactions. Batch members are validated
-  before link writes. Shared cards/rooms are registered beforehand in separate transactions and may survive
-  a later membership failure. Membership upsert loads canonical tracked Animals and existing links including
-  soft-deleted links, restores/updates existing rows, and tracks only a fresh link for each insertion. One SaveChanges
-  persists the link batch; results use those tracked instances in input order without a second result query.
-  Transaction disposal rolls back an unsuccessful batch; the failure ends the operation.
+- Park slug reservation uses serializable transactions. Membership addition validates the batch before link writes
+  and loads canonical tracked Animals and existing links, including soft-deleted links. AddOrRestoreAsync delegates
+  to AddOrRestoreBatchAsync: active links keep their local fields, deleted links are restored with the supplied values,
+  and missing links are inserted. One SaveChanges transaction persists the entire link batch; results use those
+  tracked instances in input order without a second result query. Failed saving rolls back the batch and ends the operation.
+  Shared cards/rooms are registered beforehand in separate transactions and may survive a later membership failure.
+  Membership writes do not start explicit transactions or request stronger isolation. The unique park/animal index
+  rejects duplicate inserts, including concurrent additions; storage errors propagate without recovery or retries.
 - Connection submission prevents two unfinished requests. Transitions query the expected state inside RepeatableRead
   and save the tracked request with status/deletion concurrency tokens, without changing park availability.
 - Adding a session/message tracks only the new row, avoiding reinsertion of detached account/room graphs.
 - Profile updates require an active account and change display name/update time.
-  Profile/message/membership updates query tracked rows inside RepeatableRead so related visibility/state checks
+  Profile/message updates query tracked rows inside RepeatableRead so related visibility/state checks
   remain valid until commit. Message deletion uses the common soft-delete handling; saved timestamps are copied
   back to the supplied message so published events use the persisted deletion time.
   Message updates cannot restore a concurrently deleted message or write to a closed room.
 
-Read methods retain detached snapshots; write results from registration/upsert may be tracked within the current context.
+Read methods retain detached snapshots; write results from registration/add-or-restore may be tracked in the current context.
 Sources do not attach detached navigation graphs for updates. Failures that end an operation do not manually detach
 entities or clear the tracker; the context is disposed at the end of its scope. Current callers of failed Try writes
 throw a business error and do not continue saving. Shared registration also stops on a failed write;

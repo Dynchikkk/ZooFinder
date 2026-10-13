@@ -17,12 +17,13 @@ public interface IParkAnimalDataSource
         OffsetPageRequest pageRequest,
         CancellationToken cancellationToken);
 
-    Task<ParkAnimal> UpsertAsync(
+    // Existing active links are returned unchanged; restored links use the supplied local fields.
+    Task<ParkAnimal> AddOrRestoreAsync(
         ParkAnimal parkAnimal,
         CancellationToken cancellationToken);
 
     // Atomic only for park links; shared species registration happens before this operation.
-    Task<IReadOnlyList<ParkAnimal>> UpsertBatchAsync(
+    Task<IReadOnlyList<ParkAnimal>> AddOrRestoreBatchAsync(
         Guid parkId,
         IReadOnlyList<ParkAnimal> parkAnimals,
         CancellationToken cancellationToken);
