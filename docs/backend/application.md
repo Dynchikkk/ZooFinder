@@ -59,6 +59,9 @@ Each service is grouped in Services/<Name>/ with its interface, implementation, 
 The folder omits the Service suffix. A service can implement several related use cases; one service per module
 is not mandatory.
 
+Each C# file declares one type; related DTOs may share a `*Contracts.cs` file.
+Service implementation files must not contain additional nested classes or records.
+
 DataSources folders stay flat. A source serves a coherent task and can work with several Domain entities.
 Do not create a source per table, method, or service.
 Optional <Name>DataSourceContracts.cs belongs beside the interface.
@@ -68,6 +71,10 @@ Providers, hashing, token generation, and publishers belong to Dependencies/<Nam
 own contracts when needed. Implementations remain outside Application.
 Dependency contracts must not import service requests/responses.
 Related constants, validators, settings, and helpers belong to their owner.
+
+Validators check supplied values and do not normalize or mutate input. Services normalize values first,
+then pass them to validators. Reusable normalization belongs to the owning module's Extensions and must not
+perform validation or throw request-validation errors.
 
 Settings are plain configuration classes needed by Application logic; they do not read IConfiguration
 or appsettings.json. Technical connection/transport settings belong to the Infrastructure implementation.
@@ -118,6 +125,7 @@ ZooFinder.Application/
    ├─ Parks/
    │  ├─ DataSources/
    │  ├─ Constants/
+   │  ├─ Extensions/
    │  ├─ Validators/
    │  └─ Modules/
    │     ├─ Catalog/Services/Parks/
@@ -270,6 +278,18 @@ Existing account and discussion-message rules still apply to those existing modu
 | `ParkAnimalService` | Get/search, add/reuse species, update local text/publication, remove membership |
 | `ParkAnimalImportService` | Preview decoded rows and apply confirmed selections |
 | `ParkConnectionService` | Get/search requests, submit, approve price, confirm payment, reject/cancel |
+
+Each Parks service uses descriptive dependency names and separates input preparation, source calls, and response mapping.
+Catalog, membership, and connection responses are mapped through private `ToResponse` methods within their owning services.
+Membership detail retrieval isolates the information-provider call and its unavailable-information fallback.
+Parks/Extensions/ParkTextExtensions normalizes required/optional text; Parks validators only check the resulting values.
+Import apply validates the complete selection and retrieves provider details before registering shared animals,
+then saves the membership batch. It uses the existing selection and provider contracts without an extra preparation DTO.
+Preview handles each row through typed catches for validation, not-found, and provider-unavailability errors;
+duplicate identities return a row error directly. Cancellation and invalid provider output remain operation failures.
+Import identities use normalized source/item/language values for duplicate detection and provider-result checks;
+they are not encoded into a delimiter-separated string.
+Connection updates share one private helper for conditional writes and stale-state errors; transition checks remain in their scenarios.
 
 A park is active immediately and may have no species list.
 Park searches use zero-based offset pagination and can include suspended parks explicitly.

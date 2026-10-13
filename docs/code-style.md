@@ -79,6 +79,9 @@ public bool IsPublic => _isPublic;
 
 Interface methods without an implementation remain declarations ending in `;`; they do not need a body.
 
+Separate adjacent method declarations in an interface with one blank line.
+When the next method has documentation or comments, place the blank line before them and keep them next to that method.
+
 ## Interface and Contract Parameters
 
 When an interface method declaration has multiple parameters, place every parameter on its own line,

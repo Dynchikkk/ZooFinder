@@ -45,7 +45,10 @@ public sealed class ParkAnimalDataSource(ZooFinderDbContext dbContext, TimeProvi
 
     public async Task<ParkAnimal> UpsertAsync(ParkAnimal parkAnimal, CancellationToken cancellationToken)
     {
-        return (await UpsertBatchAsync(parkAnimal.ParkId, [parkAnimal], cancellationToken))[0];
+        ArgumentNullException.ThrowIfNull(parkAnimal);
+
+        var links = await UpsertBatchAsync(parkAnimal.ParkId, [parkAnimal], cancellationToken);
+        return links[0];
     }
 
     public async Task<IReadOnlyList<ParkAnimal>> UpsertBatchAsync(
@@ -53,87 +56,101 @@ public sealed class ParkAnimalDataSource(ZooFinderDbContext dbContext, TimeProvi
         IReadOnlyList<ParkAnimal> parkAnimals,
         CancellationToken cancellationToken)
     {
-        if (parkAnimals.Any(link => link.ParkId != parkId) ||
-            parkAnimals
-                .Select(link => link.AnimalId)
-                .Distinct()
-                .Count() != parkAnimals.Count)
-        {
-            throw new ArgumentException("Park links must have one park and distinct species.", nameof(parkAnimals));
-        }
+        Guid[] animalIds = GetBatchAnimalIds(parkId, parkAnimals);
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+
         if (!await dbContext.Parks.AnyAsync(park => park.Id == parkId, cancellationToken))
         {
             throw new NotFoundException("Park was not found.");
         }
 
-        var animalIds = parkAnimals
-            .Select(link => link.AnimalId)
-            .ToArray();
-        // Use tracked canonical instances: registration may already have tracked
-        // these cards in the same scope, and detached copies would conflict.
-        var shared = await dbContext.Animals
+        int animalCount = await dbContext.Animals
             .Where(animal => animalIds.Contains(animal.Id))
-            .ToDictionaryAsync(animal => animal.Id, cancellationToken);
-        if (shared.Count != parkAnimals.Count)
+            .CountAsync(cancellationToken);
+
+        if (animalCount != animalIds.Length)
         {
             throw new ConflictException("A shared animal is no longer available.");
         }
 
-        var existing = await dbContext.ParkAnimals
+        var existingIds = await dbContext.ParkAnimals
             .IgnoreQueryFilters()
-            .AsNoTracking()
             .Where(link => link.ParkId == parkId && animalIds.Contains(link.AnimalId))
-            .ToDictionaryAsync(link => link.AnimalId, cancellationToken);
-        var result = new List<ParkAnimal>(parkAnimals.Count);
+            .Select(link => new { link.AnimalId, link.Id })
+            .ToDictionaryAsync(link => link.AnimalId, link => link.Id, cancellationToken);
         var added = new List<ParkAnimal>();
         DateTime now = timeProvider.GetUtcNow().UtcDateTime;
+
         try
         {
             foreach (var requested in parkAnimals)
             {
-                if (existing.TryGetValue(requested.AnimalId, out var link))
+                if (existingIds.TryGetValue(requested.AnimalId, out Guid linkId))
                 {
-                    // Re-adding restores the association, without replacing the shared card or chat.
-                    await dbContext.ParkAnimals
-                        .IgnoreQueryFilters()
-                        .Where(candidate => candidate.Id == link.Id)
-                        .ExecuteUpdateAsync(setters => setters
-                            .SetProperty(candidate => candidate.LocalDescription, requested.LocalDescription)
-                            .SetProperty(candidate => candidate.IsPublished, requested.IsPublished)
-                            .SetProperty(candidate => candidate.IsDeleted, false)
-                            .SetProperty(candidate => candidate.DeletedAtUtc, (DateTime?)null)
-                            .SetProperty(candidate => candidate.UpdatedAtUtc, now), cancellationToken);
-                    link.LocalDescription = requested.LocalDescription;
-                    link.IsPublished = requested.IsPublished;
-                    link.IsDeleted = false;
-                    link.DeletedAtUtc = null;
-                    link.UpdatedAtUtc = now;
+                    await RestoreAndUpdateAsync(linkId, requested, now, cancellationToken);
                 }
                 else
                 {
-                    link = requested;
-                    // Only the link is new. Navigations may reference detached, existing entities.
-                    dbContext.Entry(link).State = EntityState.Added;
-                    added.Add(link);
+                    dbContext.Entry(requested).State = EntityState.Added;
+                    added.Add(requested);
                 }
-
-                link.Animal = shared[link.AnimalId];
-                result.Add(link);
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);
+
+            var saved = await dbContext.ParkAnimals
+                .AsNoTracking()
+                .Include(link => link.Animal)
+                .Where(link => link.ParkId == parkId && animalIds.Contains(link.AnimalId))
+                .ToDictionaryAsync(link => link.AnimalId, cancellationToken);
+            var result = parkAnimals
+                .Select(requested => saved[requested.AnimalId])
+                .ToArray();
+
             await transaction.CommitAsync(cancellationToken);
             return result;
         }
         catch
         {
-            await transaction.RollbackAsync(CancellationToken.None);
-            foreach (var link in added) dbContext.Entry(link).State = EntityState.Detached;
+            foreach (var link in added)
+            {
+                dbContext.Entry(link).State = EntityState.Detached;
+            }
+
             throw;
         }
+    }
+
+    private static Guid[] GetBatchAnimalIds(Guid parkId, IReadOnlyList<ParkAnimal> parkAnimals)
+    {
+        ArgumentNullException.ThrowIfNull(parkAnimals);
+
+        var animalIds = new HashSet<Guid>();
+
+        foreach (var link in parkAnimals)
+        {
+            if (link.ParkId != parkId || !animalIds.Add(link.AnimalId))
+            {
+                throw new ArgumentException("Park links must have one park and distinct species.", nameof(parkAnimals));
+            }
+        }
+
+        return animalIds.ToArray();
+    }
+
+    private Task<int> RestoreAndUpdateAsync(Guid linkId, ParkAnimal requested, DateTime now, CancellationToken cancellationToken)
+    {
+        return dbContext.ParkAnimals
+            .IgnoreQueryFilters()
+            .Where(link => link.Id == linkId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(link => link.LocalDescription, requested.LocalDescription)
+                .SetProperty(link => link.IsPublished, requested.IsPublished)
+                .SetProperty(link => link.IsDeleted, false)
+                .SetProperty(link => link.DeletedAtUtc, (DateTime?)null)
+                .SetProperty(link => link.UpdatedAtUtc, now), cancellationToken);
     }
 
     public async Task UpdateAsync(ParkAnimal parkAnimal, CancellationToken cancellationToken)

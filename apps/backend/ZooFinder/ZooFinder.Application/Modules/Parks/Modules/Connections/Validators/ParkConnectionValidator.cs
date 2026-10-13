@@ -13,15 +13,12 @@ public static class ParkConnectionValidator
         }
     }
 
-    public static string? NormalizeText(string? value, int maximumLength)
+    public static void ValidateText(string? text, int maximumLength)
     {
-        string? text = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         if (text?.Length > maximumLength)
         {
             throw new RequestValidationException("Connection request text is too long.");
         }
-
-        return text;
     }
 
     public static void ValidatePrice(decimal amount, string currency)

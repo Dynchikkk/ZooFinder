@@ -13,14 +13,11 @@ public static class ParkImportValidator
         }
     }
 
-    public static string NormalizeName(string? name)
+    public static void ValidateName(string name)
     {
-        string result = name?.Trim() ?? string.Empty;
-        if (result.Length > ParkImportConstraints.MaximumNameLength)
+        if (name.Length > ParkImportConstraints.MaximumNameLength)
         {
             throw new RequestValidationException("Import animal name is too long.");
         }
-
-        return result;
     }
 }

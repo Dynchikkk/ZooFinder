@@ -13,14 +13,11 @@ public static class ParkAnimalValidator
         }
     }
 
-    public static string? NormalizeDescription(string? value)
+    public static void ValidateDescription(string? description)
     {
-        string? description = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         if (description?.Length > ParkAnimalConstraints.MaximumLocalDescriptionLength)
         {
             throw new RequestValidationException("Local animal description is too long.");
         }
-
-        return description;
     }
 }
