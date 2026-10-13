@@ -1,63 +1,54 @@
 # Frontend Plan
 
-**Status:** `apps/frontend` contains only `.gitkeep`. Angular/TypeScript is the selected frontend direction;
-there is no Angular project, dependency manifest, application code, or implemented screen yet.
+Angular/TypeScript is selected. apps/frontend currently contains only .gitkeep.
+Project setup and component conventions will be agreed when implementation starts.
 
-Backend capabilities and remaining integrations are described in [Backend](../backend/README.md).
-The product sequence is described in the [roadmap](../planning/parks-and-recognition-roadmap.md).
+## Main Flow
 
-## Planned User Flows
+1. Select a park.
+2. Upload a photograph.
+3. View recognition candidates.
+4. Open the park card or Wiki information.
 
-- Select a park, photograph/upload an animal, view candidates, and open park information or Wiki.
-- Recognize an animal without a selected park.
-- Search external/local animal catalogs and view the shared card/discussion.
-- Create/edit parks and memberships, including local text and publication.
-- Preview and confirm CSV imports.
-- Submit/view connection requests and record approval/manual payment.
-- Register/login, edit a profile, and read/write discussions.
+Also support:
 
-Parks work without a species list. New park-management and connection screens are available to everyone in v1.
-Existing account/message-write requirements remain applicable to their own screens.
+- General recognition and catalog search.
+- Park/membership editing.
+- Import preview and confirmation.
+- Connection requests and manual payment tracking.
+- Authentication, profiles, and discussions.
 
-## Suggested Module Organization
+Park management is open in v1.
+Protected account/message operations retain their permissions.
 
-The following is a proposed layout, not an existing or separately finalized frontend architecture:
+## Organization and API Boundary
 
-```text
-src/app/
-├─ core/
-├─ shared/
-└─ modules/
-   ├─ animals/
-   │  └─ modules/
-   │     ├─ catalog/
-   │     └─ recognition/
-   ├─ parks/
-   │  └─ modules/
-   │     ├─ catalog/
-   │     ├─ animals/
-   │     ├─ import/
-   │     └─ connections/
-   ├─ auth/
-   ├─ users/
-   └─ discussions/
-```
+| Area | Purpose |
+| --- | --- |
+| core | Composition and session infrastructure |
+| shared | Reusable presentation components |
+| Business modules | Scenario-specific UI |
 
-Core handles application-wide composition/session infrastructure; shared contains reusable presentation
-components. Business UI is grouped by modules. Final Angular setup and component conventions will be chosen
-when frontend implementation starts.
+Detailed nesting is not finalized.
+The browser communicates with ZooFinder.Api, never directly with Wiki, Python, or SQL Server.
 
-## API Boundary and Display Rules
+## Display Rules
 
-The browser communicates with ZooFinder.Api, not directly with Wiki, Python, or the database.
-Recognition and catalog are separate operations. A returned ParkAnimalId opens a park card; otherwise
-scientific/common names seed a separate catalog search.
+- Recognition and catalog are separate operations.
+- ParkAnimalId opens a park card; otherwise names seed catalog search.
+- Source links come from the provider; support missing images/URLs.
+- Local park text supplements the shared card.
+- A saved card/General room may have no messages.
+- Deleted messages retain metadata without content.
+- Pass cursors back unchanged.
 
-Source URLs come from the information provider. Lists and fallback cards may lack a URL or image;
-the UI must support explicit empty states. Local park descriptions supplement shared information.
+Distinguish these outcomes:
 
-LocalAnimalId/HasStartedDiscussion indicates a saved shared card and General room, which may have no messages.
-A shared discussion belongs to the species card, not a park. Deleted messages display metadata without content.
+- Recognition uncertainty.
+- No animal in the image.
+- Technical error.
+- Unknown or suspended park.
+- Empty optional park catalog.
 
-Cursor values are returned unchanged to request the next page. Recognition suggestions, uncertain results,
-technical errors, suspended parks, and a missing optional species list must remain distinguishable.
+See [Backend](../backend/README.md) for status
+and the [roadmap](../planning/parks-and-recognition-roadmap.md) for remaining work.

@@ -1,175 +1,104 @@
 # Domain Layer
 
-`ZooFinder.Domain` defines the project entities, relationships, and domain rules. It has no dependencies on other projects.
+Domain contains the subject model without dependencies on other layers.
 
-**Status:** The nine entities and their EF mappings are implemented; the database has not been initialized
-through migrations. Global responsibilities are defined in [General architecture](../architecture.md).
+## Organization
 
-## Organization Rules
+- Group entities by subject: Animals, Parks, Discussions, Users, BaseEntities.
+- Entity-based folders/namespaces are plural; classes are singular.
+- Namespaces match placement.
+- Resolve naming collisions without aliases.
 
-Domain groups entities by subject area; it does not use Application's recursive module/service/dependency layout.
-Entity-based folders and namespaces are plural, while entity class names remain singular.
-Namespaces match placement. Avoid namespace/type collisions through these names, rather than entity aliases.
+## Entities and Relationships
 
-## Structure
-
-```text
-ZooFinder.Domain/
-├─ Animals/
-├─ BaseEntities/
-├─ Discussions/
-├─ Parks/
-└─ Users/
-```
-
-## Base Entity
-
-All entities inherit from `IdEntity<TId>`.
-
-| Field | Type | Purpose |
-| --- | --- | --- |
-| `Id` | `TId` | Primary identifier |
-| `IsDeleted` | `bool` | Soft-deletion state |
-| `CreatedAtUtc` | `DateTime` | Creation timestamp |
-| `UpdatedAtUtc` | `DateTime` | Last update timestamp |
-| `DeletedAtUtc` | `DateTime?` | Deletion timestamp |
-
-## Relationships
-
-```text
-Animal 1 ─────── * DiscussionRoom
-                         │
-                         │ 1
-                         ▼
-              * DiscussionMessage * ─────── 1 UserAccount
-                                              │
-                                              ├──── 1 UserProfile
-                                              │
-                                              └──── * UserRefreshSession
-```
-
-`Park 1 → * ParkAnimal * ← 1 Animal`: a species can appear in several parks or none.
-`Park 1 → * ParkConnectionRequest`: commercial connection requests are separate from availability.
-
-`Park.OwnerUserAccountId` is optional metadata. `Animal.ParkAnimals` and `Park.ParkAnimals` contain association
-records, not animals or parks directly. One Animal in two parks therefore has two ParkAnimal records.
-`Park.ConnectionRequests` contains the park's connection requests.
-
-## Animal
-
-| Field | Type |
+| Entity | Purpose |
 | --- | --- |
-| `InformationSource` | `string` |
-| `SourceItemId` | `string` |
-| `LanguageCode` | `string` |
-| `Title` | `string` |
-| `ScientificName` | `string?` |
-| `ShortDescription` | `string?` |
-| `ImageUrl` | `string?` |
-| `LastSynchronizedAtUtc` | `DateTime` |
+| Animal | Sourced species card shared across parks |
+| Park | Park information and Active/Suspended state |
+| ParkAnimal | Park/Animal association with local description/publication |
+| ParkConnectionRequest | Request, agreed price, and manual payment state |
+| DiscussionRoom | General or Topic room belonging to an Animal |
+| DiscussionMessage | Room message authored by a UserAccount |
+| UserAccount | Login/password hash, role, and activity state |
+| UserProfile | One public profile per account |
+| UserRefreshSession | Multiple refresh sessions per account, stored as hashes |
 
-Rules:
+All entities inherit IdEntity<TId>: identity, creation/update timestamps, and soft-deletion fields.
 
-- `(InformationSource, LanguageCode, SourceItemId)` identifies one sourced animal.
-- Matching and reuse are language-scoped; ru/en source cards are not a language-independent Species entity.
-- `SourceUrl` is resolved by the information provider and is not persisted.
-- Search results are not persisted.
-- An animal is persisted when its General discussion room is created. The room may initially contain no messages.
-- Shared registration is used by park additions, imports, and explicit discussion creation. It creates a card and General
-  room together, or reuses them by `InformationSource + SourceItemId + LanguageCode`. Scientific names and titles
-  do not merge cards from different source identities.
+- Each Animal has rooms; each room has messages.
+- Each message belongs to an account.
+- An Animal may belong to several parks or none.
+- ParkAnimal navigations hold associations.
+- OwnerUserAccountId is optional park metadata, not an authorization rule.
 
-## Parks
+## Animals and Parks
 
-`Park` contains `Name`, unique `Slug`, optional `Description`/`Address`, `Status`, and optional `OwnerUserAccountId` metadata. Status values are `Active` and `Suspended`; a new park is immediately active without an owner, species list, or payment. No owner/role authorization is applied to park operations in v1.
+### Animal Identity
 
-`ParkAnimal` contains `ParkId`, `AnimalId`, optional `LocalDescription`, and `IsPublished`. `(ParkId, AnimalId)` is unique.
-It represents membership of a shared species, not an individual animal. Removing or editing membership does not
-change the shared animal or chat. Re-adding restores a deleted association with its original ID and the supplied
-local fields. An already active association is returned unchanged; its local fields are changed by explicit editing.
+An Animal is identified by InformationSource + SourceItemId + LanguageCode.
 
-`ParkConnectionRequest` contains `ParkId`, optional contact information/comment, `Status`, `AgreedAmount`, `Currency`, and `PaidAtUtc`. Only one unfinished request per park is allowed. Transitions are `Submitted → AwaitingPayment → Activated`; `Submitted`/`AwaitingPayment` may become `Rejected` or `Cancelled`. Approval records the price and currency; payment confirmation records UTC time. These states never control park availability in v1.
+- Scientific names/titles do not merge different identities.
+- English and Russian cards are separate.
+- SourceUrl is resolved by the provider, not stored.
+- Search results are transient.
+- Shared registration creates/reuses a card with an empty General room.
 
-## DiscussionRoom
+### Park Membership
 
-| Field | Type |
+ParkAnimal describes species membership, not an individual animal.
+
+| Action | Result |
 | --- | --- |
-| `AnimalId` | `Guid` |
-| `Type` | `DiscussionRoomType` |
-| `Name` | `string` |
-| `Description` | `string?` |
-| `IsClosed` | `bool` |
+| Edit/remove membership | Shared card/chat stays |
+| Re-add deleted membership | Restore original ID with supplied local fields |
+| Re-add active membership | Return unchanged |
 
-`DiscussionRoomType` values:
+New parks are Active and may have no catalog.
+Park operations are open to everyone in v1.
 
-```text
-None = 0
-General = 1
-Topic = 2
-```
+### Connection Requests
 
-Rules:
+Connections record the commercial workflow separately from park availability.
 
-- A room belongs to one animal.
-- Each animal has one `General` room.
-- An animal may have multiple `Topic` rooms.
-- Room names are unique within an animal.
-- Application exposes no deletion operation for a `General` room; this is not enforced by a SQL CHECK constraint.
-- The unique `(AnimalId, Name)` index protects the fixed `General` name; uniqueness by room type alone is not enforced.
-
-## DiscussionMessage
-
-| Field | Type |
+| Current state | Allowed next states |
 | --- | --- |
-| `DiscussionRoomId` | `Guid` |
-| `AuthorUserAccountId` | `Guid` |
-| `Content` | `string` |
-| `EditedAtUtc` | `DateTime?` |
+| Submitted | AwaitingPayment, Rejected, Cancelled |
+| AwaitingPayment | Activated, Rejected, Cancelled |
+| Activated, Rejected, Cancelled | None |
 
-Rules:
+- Only one unfinished request exists per park.
+- Agreement records amount/currency; payment is manual.
+- Connection states do not gate park use.
 
-- A message belongs to one room and one user account.
+## Discussions and Accounts
+
+### Rooms and Messages
+
+- Each Animal has one General room and may have Topic rooms.
+- Room names are unique per Animal.
+- Application exposes no General-room deletion.
+- The database index protects the fixed General name, not uniqueness by room type or a deletion prohibition.
 - Empty messages are invalid.
-- Closed rooms reject new messages.
-- Blocked users cannot write messages.
-- Deleted message content is hidden from regular users.
+- Closed rooms and blocked accounts cannot receive writes.
+- Deleted content is hidden; history metadata stays.
 
-## UserAccount
+### Account States
 
-`UserAccount` stores identity and authorization state.
-
-| Field | Type |
+| Property | Values |
 | --- | --- |
-| `Login` | `string?` |
-| `PasswordHash` | `string?` |
-| `Role` | `UserRole` |
-| `Status` | `UserStatus` |
+| Role | None, User, Moderator, Administrator |
+| State | None, Active, Blocked |
 
-`UserRole` values are `None`, `User`, `Moderator`, and `Administrator`.
+New local accounts are active Users.
+None is invalid for persisted roles/states.
 
-`UserStatus` values are `None`, `Active`, and `Blocked`.
+### Stored User Data
 
-New locally registered accounts use the `User` role and `Active` status. Their normalized login is unique and their password is persisted only as a hash. `None` is not a valid persisted role or status.
+- Normalized logins are unique.
+- Passwords and refresh tokens are stored as hashes.
+- Access tokens and raw refresh tokens are transient.
+- Each profile has one owner.
+- DisplayName is public, non-unique, and 1–100 normalized characters.
 
-## UserProfile
-
-`UserProfile` stores public user data.
-
-| Field | Type |
-| --- | --- |
-| `UserAccountId` | `Guid` |
-| `DisplayName` | `string` |
-
-One account has one profile. `DisplayName` is not a credential, is not unique, and contains between 1 and 100 characters after normalization.
-
-## UserRefreshSession
-
-| Field | Type |
-| --- | --- |
-| `UserAccountId` | `Guid` |
-| `RefreshTokenHash` | `string` |
-| `ExpiresAtUtc` | `DateTime` |
-| `LastUsedAtUtc` | `DateTime?` |
-| `RevokedAtUtc` | `DateTime?` |
-
-One account may have multiple refresh sessions. Only the refresh-token hash is persisted. Access tokens and raw refresh tokens are transient.
+[Infrastructure](infrastructure.md) owns mappings and database constraints.
+[Application](application.md) defines scenario permissions and behavior.

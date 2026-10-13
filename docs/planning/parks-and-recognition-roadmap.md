@@ -1,209 +1,170 @@
-# ZooFinder: Product, Local Recognition, and Model Research
+# Product and Research Roadmap
 
-This document describes the product and remaining work.
-Implemented details are documented in [Backend](../backend/README.md) and the
-[completed Domain/Application stage](domain-application-changes.md).
-Mandatory development constraints are in [Development process](../development.md) and [Architecture](../architecture.md).
+See [Backend](../backend/README.md) for current implementation.
+This document contains future work and proposals; [development rules](../development.md) remain mandatory.
 
-## Product and First-Version Scope
+## Scope
 
-A visitor selects a nature or safari park, photographs an animal, and receives species-identification candidates.
-The park card supplements shared information with a local description; Wiki remains the information/link source.
-A park works without a species list, while a populated published catalog can improve recognition context.
+### First Version
 
-The connection workflow records a request, agreed price, and manual payment confirmation.
-In v1, all park operations are open and payment does not gate use.
-Activated is the state of a completed request; Active/Suspended is the separate state of the park itself.
-Payment gateways, subscriptions, and owner-based authorization are deferred.
+Main flow: park → photograph → species candidates → card/Wiki.
 
-Recognition targets species, not individuals. Health, enclosures, tickets, organizations, and employees are outside v1.
-The Animal card and General chat are shared; two parks create two ParkAnimal associations to one card.
-Cards and chats are reused only by `InformationSource + SourceItemId + LanguageCode`.
-A complete language-independent Species/Taxon identity does not yet exist.
+Additional flows:
 
-Neural models are ready pretrained models with published weights, running entirely locally.
-Training, fine-tuning, LoRA, and independently modifying/quantizing weights are excluded.
-Wiki requests remain external: local execution applies to inference, not complete application independence from the network.
+- Park management and CSV imports.
+- Connection requests and manual payment confirmation.
+- Accounts and discussions.
 
-## Actual State
+Product rules:
 
-| Component | Implemented | Remaining |
-| --- | --- | --- |
-| Domain | Nine entities, including park/membership/request | Agree on the final schema |
-| Application | Eleven services, contracts, validation, registration/context/import | End-to-end integration |
-| Persistence | Nine DataSources, context, mappings, soft deletion, and transactions | Runtime DI, future Initial, SQL Server verification |
-| Wiki | Interface and provider-neutral contracts | Concrete provider |
-| Recognition | Service, park context, statuses/alternatives/metadata | .NET HTTP adapter and Python |
-| Security/events | Interfaces and Application calls | Hashing, tokens, event transport |
-| API | Program/settings scaffold | Endpoints, auth, DI, errors, uploads, and CSV |
-| Frontend | .gitkeep | Angular application |
-| Deployment | Placeholder infra/docker and scripts directories | Dockerfiles/Compose and instructions |
-| Verification | Builds; no test projects | Automated checks at the final stage |
-| Research | Plan | Dataset, model execution, measurements, and analysis |
+- Parks work without a catalog or payment.
+- Park operations are open in v1.
+- Species cards/chats are shared by exact source/item/language identity.
+- Inference runs locally with ready pretrained weights.
+- Wiki remains external; local inference does not make the application offline.
 
-Ready models have not yet been run in this repository.
-The InferenceMilliseconds field does not establish the existence of a benchmark runner or experimental results.
+### Outside the First Version
 
-## Wiki and Cards
+- Individual-animal tracking, health, enclosures, and tickets.
+- Organizations and employees.
+- Subscriptions, payment gateways, and owner-based authorization.
+- Training, fine-tuning, LoRA, or independent weight modification/quantization.
 
-The model returns names/candidates, not trusted links.
-Links come through IAnimalInformationProvider and verified source identity.
-In general mode, the client performs a separate search; with park context, it can open ParkAnimalId directly.
+Recognition history and visitor-photo persistence are not implemented.
 
-Park-species lists use cached Animal data. Individual park-card retrieval requests live information
-and falls back to saved data without SourceUrl when the provider is unavailable or returns null.
-The shared AnimalCatalogService.GetAnimalAsync does not yet have this fallback.
+## Integration Work
 
-The future provider must define HTTP timeouts, client identification, caching, and display of text/image sources.
-API and material-use requirements will be clarified during implementation using
-[MediaWiki API Info](https://www.mediawiki.org/wiki/API:Info) and
-[MediaWiki API Etiquette](https://www.mediawiki.org/wiki/API:Etiquette).
+1. Implement Wiki retrieval, timeouts, client identification, source attribution, and caching.
+2. Implement API composition, bearer validation, endpoints/errors, upload validation, and event transport.
+3. Agree the .NET/Python wire protocol and connect one local model.
+4. Build recognition UI, then park editing, CSV preview/apply, and connection tracking.
+5. After schema agreement, create Initial, configure deployment, and verify end-to-end flows.
+6. Add automated tests at the final stage, then further model adapters and research runs.
 
-## Python and .NET
+Implementation notes:
 
-```text
-Browser → ZooFinder.Api → Application
-                          ├─ DataSource → SQL Server
-                          ├─ Wiki provider → MediaWiki
-                          └─ Recognition provider → local Python → ready pretrained model
-```
+- Wiki integration must follow [API Info](https://www.mediawiki.org/wiki/API:Info)
+  and [API Etiquette](https://www.mediawiki.org/wiki/API:Etiquette).
+- Existing Auth security implementations need wiring, not replacement.
+- CSV flow: decode → preview → correction/selection → apply. XLSX is a later extension.
+- [Application](../backend/application.md) defines import behavior and partial-failure boundaries.
+- Academic UML should reflect actual scenarios, relationships, request states, recognition sequence, and deployment.
 
-Python receives an image, language, and optional candidates, runs inference, and returns a DTO.
-It does not connect to the main database or retrieve Wiki information.
-.NET owns parks, states, source identity, and validation of returned contextual IDs.
+## Python Service Proposal
 
-The service should remain small: an entry point, configuration, selected-model loading,
-and a few simple wrappers around library calls. Load the model at startup; change profiles through
-configuration/restart. Dynamic model installation, a complex framework, and an experiment web UI are unnecessary.
+### Structure and Responsibility
 
-A label-based classifier must support a general vocabulary when the park catalog is empty.
-Visitors do not have to compile that vocabulary. A generative model can use its own prompt/parser.
-Failure to choose a known species indicates uncertainty; it does not itself prove that no animal is present.
+- Keep an entry point, configuration, startup model loading, and simple library adapters.
+- Select profiles via configuration/restart.
+- Avoid a dynamic installation framework or experiment web UI.
+- Receive an image, language, and optional candidates.
+- Do not access SQL Server or request Wiki.
 
-### Existing Application Contract
+### Recognition Contract
 
-- Request: ImageStream, ContentType, LanguageCode, Candidates.
-- Context candidate: AnimalId, CommonName, ScientificName.
-- Result: Status, CommonName, ScientificName, Alternatives, optional AnimalId and Execution.
-- Execution: ModelId, optional Revision, InferenceMilliseconds.
-- Service response: validated names/alternatives and optional ParkAnimalId.
+[Application](../backend/application.md#animals) defines recognition behavior.
 
-Statuses: Recognized, Uncertain, NoAnimal.
-Application validates ID membership in context, duplicates, and NoAnimal consistency.
-Technical errors are not replaced by Uncertain.
+| Result field | Purpose |
+| --- | --- |
+| Recognized / Uncertain / NoAnimal | Recognition outcome |
+| Names and alternatives | Species suggestions |
+| Optional known AnimalId | Match from the supplied context |
+| ModelId / Revision / InferenceMilliseconds | Optional execution metadata |
 
-Confidence scores, context hash, stage timings, and request ID are currently absent.
-They may be added for integration/research after contract agreement; they are not implemented capabilities.
+Confidence scores and context hashes are not implemented.
 
-### Proposed HTTP Protocol — Not Implemented
+- An empty catalog uses general recognition.
+- Classifier vocabularies must not depend on visitor-created lists.
+- An unmatched known species means uncertainty, not proof that no animal is present.
 
-- POST /v1/recognize: multipart with image and metadata.
-- GET /health/live: the process is running.
-- GET /health/ready: the model is ready.
-- GET /v1/model: loaded-profile information.
+### Proposed Endpoints
 
-An empty list means general mode. Agree on field names and wire status values between .NET/Python;
-the Application enum is not an implemented HTTP schema.
-Define behavior for URL configuration, timeouts, response limits, decoding errors, and overload.
+These endpoints are not implemented.
 
-Prepare weights and dependencies in advance. Inference uses local files without automatically
-switching to external APIs. CPU/GPU support and acceptable model size depend on the available hardware.
+| Endpoint | Purpose |
+| --- | --- |
+| POST /v1/recognize | Multipart image/metadata |
+| GET /health/live | Process is running |
+| GET /health/ready | Model readiness |
+| GET /v1/model | Loaded-profile metadata |
 
-### Initial Research Candidates
+Before integration, agree:
 
-These are retained candidates for later evaluation, not a selected configuration or ZooFinder results:
+- Field names and status values.
+- URL configuration, timeouts, and response limits.
+- Invalid decoding and overload handling.
+- Target hardware, CPU/GPU use, and acceptable model size.
+
+Prepare dependencies/weights locally.
+Do not silently switch to external inference APIs.
+
+### Model Candidates
+
+These are evaluation candidates, not selected models or measured ZooFinder results.
 
 - [BioCLIP](https://huggingface.co/imageomics/bioclip).
 - [BioCLIP 2](https://huggingface.co/imageomics/bioclip-2).
 - [Qwen3-VL-2B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct).
 - [SmolVLM2-2.2B-Instruct](https://huggingface.co/HuggingFaceTB/SmolVLM2-2.2B-Instruct).
 
-Before integration, check the model card, license, library/processor, local execution, and memory requirements.
-Pin versions after a trial run on the target hardware.
-Choose the default profile using measurements; specific models and library versions are not yet fixed.
+Check model cards/licenses, processors, memory requirements, and local execution.
+Pin versions after trials and choose the default profile using measurements.
+No models have been run here yet.
 
-## Import and UI
+## Research Plan
 
-Manual species addition through Wiki is the primary simple flow.
-Application preview/apply already operates on decoded rows, up to 200 per request.
-CSV decoding and the confirmation form are absent; XLSX remains a later extension.
+### Dataset
 
-Flow: upload → validation/matching → preview → correction or selection → apply.
-Preview performs no writes. Ambiguous matches are not automatically published.
-Repeated apply reuses associations. ParkAnimal writes form one batch,
-while preliminary shared-card/chat registration uses separate transactions.
+Compare general recognition and park context on a fixed dataset.
 
-UI must distinguish uncertainty, absence of an animal, and technical errors.
-An empty park catalog must not appear as a failure.
-Park/connection management is open to everyone in v1; existing login and message permissions remain.
+- Do not tailor candidate lists using the correct answer for each image.
+- Include outside-catalog species, non-animal images, poor quality, and ambiguous cases.
+- Keep annotations separate from visitor photos.
+- Split related image series/individuals and near duplicates together to avoid leakage.
+- Document known pretraining overlap.
 
-## Remaining Work Sequence
+### Measurements
 
-1. Implement the Wiki provider, security/event dependencies needed by scenarios, and runtime DI.
-2. Add HTTP endpoints, error handling, and upload validation.
-3. Connect a simple Python service using one ready model and a .NET HTTP adapter.
-4. Build minimal UI for park → photo → result → card/Wiki.
-5. Connect park management, CSV preview/apply, and request/manual-payment tracking.
-6. After schema agreement, create Initial; configure deployment and verify end-to-end scenarios.
-7. Add automated tests at the final development stage.
-8. Connect other models and research runs.
-
-Auth is required for protected discussion scenarios but does not gate the new park flow.
-UML for academic work should reflect actual use cases, classes/relationships, request states,
-recognition sequence, and deployment. This document does not claim completed UML deliverables.
-
-## Thesis Research
-
-Compare models on a fixed dataset in general mode and with a park catalog.
-Do not tailor the candidate list to each photograph using prior knowledge of the correct answer.
-Include out-of-catalog species, images without animals, poor-quality images, and ambiguous cases.
-
-Annotations are stored separately from visitor photographs. Account for image series/individuals and near duplicates
-when splitting data to avoid leakage between pilot and final samples.
-Document pretraining-data overlap to the extent that information is available.
-No training or weight modification is performed.
-
-| Group | Planned measurements |
+| Dimension | Measurements |
 | --- | --- |
-| Quality | Top-1, Top-3 when ranking is available, macro-F1, confusion matrix |
-| Rejection/unknown | Coverage, accepted-answer quality, erroneous acceptance of out-of-list species |
-| Errors | Decode/inference errors, invalid output, unmatched names, timeout |
-| Speed | Loading separately; warmed preprocessing/inference/postprocessing, median/p95 |
-| Resources | Peak RAM/VRAM, throughput at a defined load |
-| Context | Quality/speed changes with catalog use, catalog size, and distractor species |
+| Quality | Top-1, Top-3 where ranked output exists, macro-F1, confusion matrix |
+| Rejection | Coverage, accepted-answer quality, erroneous acceptance of outside-catalog species |
+| Errors | Decode/inference/timeout errors, invalid output, unmatched names |
+| Latency | Loading separately; warmed preprocessing/inference/postprocessing, median/p95 |
+| Resources | Peak RAM/VRAM and throughput at defined load |
+| Context | Quality/latency against catalog size and distractor species |
 
-Record all errors and rejections; do not report accuracy only for successful answers without coverage.
-Separate Wiki latency from ML latency. Measure HTTP/.NET latency separately from model inference.
-Account for synchronization in GPU timing and use consistent resource-measurement boundaries.
+- Include errors/rejections in reports.
+- Separate Wiki, HTTP/.NET, and model latency.
+- Account for GPU synchronization.
 
-Record model revision, library/processor versions, device/dtype, hardware, prompt/parser/decoding,
-context contents, and dataset manifest. Preprocessing may differ according to each model's requirements;
-its parameters must be reproducible.
+### Reproducibility and Runner
 
-The minimal future runner is a separate CLI using the same adapters: config + manifest →
-per-image JSONL → aggregate CSV → charts/errors.
-Use one profile per run; no new main-database tables or experiment UI are required.
-The runner and these results are not implemented.
+Record:
 
-## Effort Estimate
+- Model revision and libraries/processor.
+- Hardware, device, and dtype.
+- Prompts, parser, decoding, and preprocessing.
+- Context and dataset manifest.
 
-The initial estimate was 70–130 hours for the first version and another 16–32 hours for additional
-model wrappers, the runner, and metrics export. This is a historical estimate of the entire scope before
-the current changes, not an estimate of remaining work or recorded actual effort.
+A future CLI runner should reuse adapters:
 
-It excluded dataset collection/annotation, long runs, analysis, thesis writing,
-and adaptation to unsupported hardware. Reassess remaining effort after selecting
-the first model, hardware, and minimal screens.
+```text
+Configuration + manifest → per-image JSONL → aggregate CSV → charts/errors
+```
 
-## Final Acceptance Criteria
+Use one profile per run.
+No experiment UI or new main-database tables are required.
+Runner/results are not implemented.
 
-These are future manual/final automated verification criteria, not completed tests.
+## Acceptance
 
-- Two parks share one species and chat while displaying different local descriptions.
-- The first saved species receives an empty General room; repeated registration creates no duplicates.
-- A park works immediately without a list/payment; suspended/unpublished data stays out of public context.
-- Preview performs no writes; repeated import reuses links; a partial failure does not publish an association batch.
-- Requests follow their transitions; repeated payment is idempotent and does not change the park.
-- Invalid images and unavailable providers produce understandable technical errors.
-- Out-of-catalog species are not added automatically; models follow one common contract.
-- Repeating an experiment on a fixed manifest preserves configuration, results, and errors.
+- Shared cards/chats with distinct park descriptions.
+- Duplicate-free registration and repeated import.
+- Immediate park use without payment/catalog.
+- Suspension/publication filtering.
+- Valid request transitions and idempotent payment.
+- Atomic link-batch failure.
+- Understandable image/provider errors.
+- No automatic outside-species insertion.
+- Reproducible experiments preserving configuration and errors.

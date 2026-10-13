@@ -1,76 +1,48 @@
 # ZooFinder
 
-ZooFinder is a web-platform project for animal discovery, photo-based species recognition in nature and
-safari parks, and shared animal discussions.
+ZooFinder is a web platform for species discovery, photo recognition in nature/safari parks,
+and shared animal discussions.
 
-**Status:** Domain, Application, EF persistence, and Auth security implementations are available. The API remains a scaffold.
-Wiki integration, the local Python recognition service/client, event publishing, complete API composition,
-frontend, and deployment configuration are pending. There is no working end-to-end application yet.
+## Scope
 
-## Product Scope
+- Search animal catalogs and view information, images, and source links.
+- Recognize species from photographs, with an optional park catalog.
+- Manage parks, species memberships, local descriptions, publication, and imports.
+- Track connection requests and manual payment confirmation.
+- Register/login, edit profiles, and participate in discussions.
 
-- Search external and saved animal catalogs; view information, images, and source links.
-- Recognize a species from a photograph, optionally using a selected park's published catalog.
-- Maintain parks, shared-species memberships, local descriptions, and publication state.
-- Preview/apply decoded species imports and track connection requests/manual payment confirmation.
-- Register/login, edit profiles, and participate in animal discussions.
+## Product Rules
 
-Search and recognition do not save animals automatically. Adding a species through a park or explicitly
-creating its discussion registers one shared Animal card and an empty General room. Other parks reuse them.
-Animal represents a sourced species card, not an individual animal; matching is scoped to language.
+- Animal cards and General chats are shared across parks.
+- Cards are identified by source/item/language; park memberships supply local text.
+- Search and recognition do not save cards automatically.
+- Parks work without a species list or payment.
+- Park operations are open to everyone in v1.
+- Authentication and message permissions still apply to their own scenarios.
+- Inference is planned locally with pretrained models, without training or fine-tuning.
+- Wiki remains an external information source.
 
-A park works without a species list. Park operations are open to everyone in v1; owner/role restrictions and
-payment gating are deferred. Payment records demonstrate the business process without blocking park use.
-Existing authentication and discussion-write rules remain in force.
-
-Neural inference will run locally using ready pretrained models, without training or fine-tuning.
-Wiki remains an external information source. Model comparison and evaluation belong to a later research stage.
-
-## Technology and Availability
-
-| Technology | Current state |
-| --- | --- |
-| .NET 10 | Backend projects |
-| ASP.NET Core | API scaffold, without business endpoints or composition |
-| EF Core / Microsoft SQL Server | Context, configurations, and data sources; no current migrations |
-| Angular / TypeScript | Planned; frontend directory contains a placeholder |
-| MediaWiki API | Provider interface only |
-| Local Python inference | Provider contract only; service and HTTP adapter pending |
-| Docker Compose | Planned; no deployment configuration yet |
+See [Backend](docs/backend/README.md) for current implementation
+and the [roadmap](docs/planning/parks-and-recognition-roadmap.md) for remaining work.
 
 ## Repository
 
-```text
-ZooFinder/
-├─ apps/
-│  ├─ backend/ZooFinder/
-│  └─ frontend/
-├─ docs/
-├─ infra/docker/
-├─ scripts/
-└─ AGENTS.md
-```
+| Location | Purpose |
+| --- | --- |
+| apps/backend/ZooFinder/ | .NET 10 backend |
+| apps/frontend/ | Planned Angular/TypeScript frontend |
+| infra/docker/ and scripts/ | Deployment placeholders |
 
-## Documentation
-
-- [Documentation index](docs/README.md).
-- [Development process](docs/development.md), [Architecture rules](docs/architecture.md), [Code style](docs/code-style.md).
-- [Backend layers](docs/backend/README.md), [Frontend plan](docs/frontend/README.md).
-- [Product and research roadmap](docs/planning/parks-and-recognition-roadmap.md).
-
-`AGENTS.md` is a short entry point to the mandatory rules rather than a second copy of them.
+Start with the [documentation index](docs/README.md) and [mandatory development rules](AGENTS.md).
 
 ## Build
 
-From the repository root with the .NET 10 SDK:
+With the .NET 10 SDK, from the repository root:
 
 ```powershell
 dotnet build apps/backend/ZooFinder/ZooFinder.slnx
 ```
 
-Automatic tests are deferred until the final development stage or an explicit user request.
-While the schema is forming, do not generate migrations or snapshots; one `Initial` migration follows model
-agreement. See [Development process](docs/development.md) and
-[database configuration](docs/backend/infrastructure.md#connection-and-migrations).
-
-A build does not require or initialize the database and does not demonstrate working provider integration.
+Builds do not initialize a database or verify external integrations.
+[Test and migration policy](docs/development.md) and
+[database settings](docs/backend/infrastructure.md#connection-and-migrations) apply.

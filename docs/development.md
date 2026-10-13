@@ -1,63 +1,58 @@
 # ZooFinder Development Process
 
-Mandatory rules for the current development stage. General principles are described in
-[Architecture](architecture.md), component organization in the layer documents,
-and formatting in [Code style](code-style.md).
-
 ## Verification
 
-- Before the final development stage, do not write automated tests, create test projects,
-  or add test dependencies or runners.
-- Add tests at the end, once the main functionality and model have stabilized, or when explicitly requested by the user.
-- At this stage, verify changes by building the solution and performing necessary manual checks.
+- Before the final development stage, do not add automated tests, test projects, dependencies, or runners.
+  Add them at the final stage or when explicitly requested.
+- Verify code changes by building and performing necessary manual checks.
+- Compilation does not verify SQL Server behavior or external integrations.
+- For documentation-only changes, check links, paths, and consistency with code.
 
-Build from the repository root:
+From the repository root:
 
 ```powershell
 dotnet build apps/backend/ZooFinder/ZooFinder.slnx
 ```
 
-If dependencies have already been restored, a sequential build can be used:
+With dependencies already restored:
 
 ```powershell
 dotnet build apps/backend/ZooFinder/ZooFinder.slnx --no-restore -m:1 -p:UseAppHost=false
 ```
 
-For documentation-only changes, check links, paths, and consistency with the current code.
-A build does not verify business behavior, SQL Server operation, or integration with external providers.
-
 ## Database Migrations
 
-- While the database model is still being formed, do not create EF migrations or a model snapshot.
-- After the model is agreed upon, create one initial migration named `Initial` for the complete current schema.
-- Keep the DbContext, entity configurations, data sources, and design-time factory:
-  they are required for the future initial migration.
+- Do not create migrations or a snapshot while the model is forming.
+- After model agreement, create one Initial migration for the full schema.
+- Keep the context, configurations, data sources, and design-time factory.
+- Mappings do not initialize the database.
 
-Previous migrations and the snapshot have been removed. At this stage, EF mappings do not mean
-that the schema has been created or updated in a live database.
+See [database settings](backend/infrastructure.md#connection-and-migrations).
 
-Connection settings and commands for future database initialization are documented in
-[Infrastructure](backend/infrastructure.md#connection-and-migrations).
+## Documentation and Changes
 
-## Documentation and Instructions
+### Content and Ownership
 
-- Keep `AGENTS.md` concise: general instructions and links to mandatory topic-specific documents.
-  Store detailed agreed rules in those documents rather than duplicating them in `AGENTS.md`.
-- Write and maintain project documentation in English.
-- Documentation must always match the current project. When changing code, update affected descriptions
-  within the same task; do not defer synchronization until the end of development.
-  Do not add synchronization or update dates.
-- Root documentation includes README.md and AGENTS.md at the repository root, as well as general documents
-  directly under docs/. Change these only after prior discussion with the developer.
-  Do not independently change general rules or root descriptions.
-- If a project change requires a root-document update, discuss that update together with the corresponding
-  decision first. The discussion requirement does not permit leaving documentation outdated.
-- Update layer and scenario documentation alongside project changes within the agreed task scope.
-- Record general process rules here, global architecture principles in architecture.md,
-  and formatting in code-style.md. Describe a layer's structure and specific decisions in its own documentation.
-- When significant uncertainty arises, clarify the decision with the developer before making disputed changes.
-  Routine decisions within already agreed rules do not require repeated discussion.
-- In case of discrepancies, follow the user's latest instructions and mandatory development rules.
-  An outdated layer description or roadmap proposal does not override those rules.
-- Distinguish the current code state from agreed future behavior and research proposals.
-- Do not reformat code unrelated to the current task without a separate request.
+- Write documentation in English.
+- Update affected behavior/rules within the same task; omit update dates.
+- Document decisions, responsibilities, behavior, and important limits.
+- Avoid file inventories, method walkthroughs, standard-library tutorials, and duplicate completion reports.
+- Keep each decision in its owning document and link to it elsewhere.
+- Keep AGENTS.md concise.
+- Distinguish current implementation, future plans, and verified behavior.
+
+| Topic | Document |
+| --- | --- |
+| Development process | development.md |
+| Global architecture | architecture.md |
+| Formatting | code-style.md |
+| Layer/scenario decisions | Relevant layer document |
+
+### Approval and Scope
+
+- Root README.md, AGENTS.md, and documents directly under docs/ require prior discussion before changes.
+- Discuss required documentation updates with the corresponding decision; do not leave them outdated.
+- Clarify significant architectural uncertainty.
+- Routine work within agreed rules needs no repeated approval.
+- The user's latest instructions take precedence; plans do not override mandatory rules.
+- Do not reformat unrelated code without a separate request.
