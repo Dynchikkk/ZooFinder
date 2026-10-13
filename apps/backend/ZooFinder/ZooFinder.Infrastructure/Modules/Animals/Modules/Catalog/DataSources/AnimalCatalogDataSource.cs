@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using ZooFinder.Application.Shared.Pagination.Contracts;
 using ZooFinder.Application.Modules.Animals.Modules.Catalog.DataSources;
+using ZooFinder.Application.Shared.Pagination.Contracts;
 using ZooFinder.Domain.Animals;
 using ZooFinder.Infrastructure.Persistence;
 using ZooFinder.Infrastructure.Persistence.Pagination;
@@ -57,6 +57,7 @@ public sealed class AnimalCatalogDataSource : IAnimalCatalogDataSource
             .Take(pageRequest.Limit + 1)
             .ToListAsync(cancellationToken);
         bool hasMore = items.Count > pageRequest.Limit;
+
         if (hasMore)
         {
             items.RemoveAt(items.Count - 1);

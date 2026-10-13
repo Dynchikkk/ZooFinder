@@ -11,6 +11,7 @@ internal static class EntityConfiguration
     {
         builder.HasKey(entity => entity.Id);
         builder.Property(entity => entity.Id).ValueGeneratedNever();
+        builder.Property(entity => entity.IsDeleted).IsConcurrencyToken();
         builder.HasQueryFilter(entity => !entity.IsDeleted);
     }
 }

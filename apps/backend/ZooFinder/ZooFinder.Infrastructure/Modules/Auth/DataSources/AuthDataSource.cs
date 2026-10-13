@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using ZooFinder.Application.Modules.Auth.DataSources;
 using ZooFinder.Domain.Users;
@@ -25,12 +26,9 @@ public sealed class AuthDataSource : IAuthDataSource
 
     public async Task<bool> TryAddUserAccountAsync(UserAccount userAccount, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(userAccount);
+
         _dbContext.UserAccounts.Add(userAccount);
-        var addedEntries = _dbContext.ChangeTracker.Entries()
-            .Where(entry => entry.State == EntityState.Added &&
-                (ReferenceEquals(entry.Entity, userAccount) || ReferenceEquals(entry.Entity, userAccount.UserProfile) ||
-                userAccount.UserRefreshSessions.Any(session => ReferenceEquals(entry.Entity, session))))
-            .ToArray();
 
         try
         {
@@ -40,11 +38,6 @@ public sealed class AuthDataSource : IAuthDataSource
         }
         catch (DbUpdateException)
         {
-            foreach (var entry in addedEntries)
-            {
-                entry.State = EntityState.Detached;
-            }
-
             // Resolve a competing registration by its natural key, without provider error codes.
             if (userAccount.Login != null &&
                 await _dbContext.UserAccounts
@@ -60,8 +53,11 @@ public sealed class AuthDataSource : IAuthDataSource
 
     public async Task AddRefreshSessionAsync(UserRefreshSession refreshSession, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(refreshSession);
+
         // The account is already persisted; attaching the navigation graph would insert it again.
         _dbContext.Entry(refreshSession).State = EntityState.Added;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -83,24 +79,50 @@ public sealed class AuthDataSource : IAuthDataSource
         DateTime usedAtUtc,
         CancellationToken cancellationToken)
     {
-        int count = await _dbContext.UserRefreshSessions
-            .Where(session => session.Id == refreshSessionId && session.RefreshTokenHash == currentRefreshTokenHash &&
-                session.RevokedAtUtc == null && session.ExpiresAtUtc > usedAtUtc &&
-                session.UserAccount.Status == UserStatus.Active)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(session => session.RefreshTokenHash, newRefreshTokenHash)
-                .SetProperty(session => session.ExpiresAtUtc, expiresAtUtc)
-                .SetProperty(session => session.LastUsedAtUtc, usedAtUtc)
-                .SetProperty(session => session.UpdatedAtUtc, usedAtUtc), cancellationToken);
-        return count == 1;
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.RepeatableRead, cancellationToken);
+        UserRefreshSession? refreshSession = await _dbContext.UserRefreshSessions
+            .SingleOrDefaultAsync(session => session.Id == refreshSessionId &&
+                session.RefreshTokenHash == currentRefreshTokenHash && session.RevokedAtUtc == null &&
+                session.ExpiresAtUtc > usedAtUtc && session.UserAccount.Status == UserStatus.Active, cancellationToken);
+
+        if (refreshSession == null)
+        {
+            return false;
+        }
+
+        refreshSession.RefreshTokenHash = newRefreshTokenHash;
+        refreshSession.ExpiresAtUtc = expiresAtUtc;
+        refreshSession.LastUsedAtUtc = usedAtUtc;
+
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return false;
+        }
     }
 
     public async Task RevokeRefreshSessionAsync(Guid refreshSessionId, DateTime revokedAtUtc, CancellationToken cancellationToken)
     {
-        await _dbContext.UserRefreshSessions
-            .Where(session => session.Id == refreshSessionId && session.RevokedAtUtc == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(session => session.RevokedAtUtc, revokedAtUtc)
-                .SetProperty(session => session.UpdatedAtUtc, revokedAtUtc), cancellationToken);
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.RepeatableRead, cancellationToken);
+        UserRefreshSession? refreshSession = await _dbContext.UserRefreshSessions
+            .SingleOrDefaultAsync(session => session.Id == refreshSessionId && session.RevokedAtUtc == null, cancellationToken);
+
+        if (refreshSession == null)
+        {
+            return;
+        }
+
+        refreshSession.RevokedAtUtc = revokedAtUtc;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task RevokeAllRefreshSessionsAsync(
@@ -108,10 +130,19 @@ public sealed class AuthDataSource : IAuthDataSource
         DateTime revokedAtUtc,
         CancellationToken cancellationToken)
     {
-        await _dbContext.UserRefreshSessions
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        var refreshSessions = await _dbContext.UserRefreshSessions
             .IgnoreQueryFilters()
             .Where(session => session.UserAccountId == userAccountId && !session.IsDeleted && session.RevokedAtUtc == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(session => session.RevokedAtUtc, revokedAtUtc)
-                .SetProperty(session => session.UpdatedAtUtc, revokedAtUtc), cancellationToken);
+            .ToListAsync(cancellationToken);
+
+        foreach (UserRefreshSession refreshSession in refreshSessions)
+        {
+            refreshSession.RevokedAtUtc = revokedAtUtc;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 }

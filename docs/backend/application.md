@@ -206,8 +206,9 @@ The interface and provider contracts are grouped under Common/Animals/Dependenci
 `AnimalInformationDetailsResult`. Exact existing source identity can be reused without a provider call.
 Otherwise the service retrieves or validates details and delegates atomic card/room registration to its source.
 
-Matching checks source identity, scientific name, then normalized title within the same language.
-Ambiguous matches and conflicting scientific names produce a conflict. Reuse retains canonical stored identity.
+Registration matches only `InformationSource + SourceItemId + LanguageCode` and reuses the stored card and room.
+Scientific names and titles do not merge cards from different source identities. Deleted cards or General rooms
+produce a conflict.
 The service returns `AnimalRegistrationResult(AnimalId, GeneralRoomId)`, rather than another module's response.
 
 Both Parks and Discussions use this scenario. First registration creates an Animal and an empty General room;

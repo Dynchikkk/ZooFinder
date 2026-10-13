@@ -10,7 +10,9 @@ internal sealed class UserRefreshSessionConfiguration : IEntityTypeConfiguration
     {
         builder.ToTable("UserRefreshSessions");
         builder.ConfigureBase();
-        builder.Property(session => session.RefreshTokenHash).HasMaxLength(512);
+        builder.Property(session => session.RefreshTokenHash).HasMaxLength(512).IsConcurrencyToken();
+        builder.Property(session => session.RevokedAtUtc).IsConcurrencyToken();
+        builder.Property(session => session.ExpiresAtUtc).IsConcurrencyToken();
         builder.HasIndex(session => session.RefreshTokenHash).IsUnique();
         builder.HasIndex(session => session.UserAccountId);
         builder.HasOne(session => session.UserAccount).WithMany(account => account.UserRefreshSessions)

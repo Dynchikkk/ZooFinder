@@ -1,7 +1,8 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
+using ZooFinder.Application.Modules.Discussions.DataSources;
 using ZooFinder.Application.Shared.ErrorHandling.Exceptions;
 using ZooFinder.Application.Shared.Pagination.Contracts;
-using ZooFinder.Application.Modules.Discussions.DataSources;
 using ZooFinder.Domain.Discussions;
 using ZooFinder.Domain.Users;
 using ZooFinder.Infrastructure.Persistence;
@@ -12,15 +13,12 @@ namespace ZooFinder.Infrastructure.Modules.Discussions.DataSources;
 public sealed class DiscussionDataSource : IDiscussionDataSource
 {
     private readonly ZooFinderDbContext _dbContext;
-    private readonly TimeProvider _timeProvider;
 
-    public DiscussionDataSource(ZooFinderDbContext dbContext, TimeProvider timeProvider)
+    public DiscussionDataSource(ZooFinderDbContext dbContext)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
-        ArgumentNullException.ThrowIfNull(timeProvider);
 
         _dbContext = dbContext;
-        _timeProvider = timeProvider;
     }
 
     public Task<DiscussionRoom?> GetGeneralRoomByAnimalSourceAsync(
@@ -101,41 +99,50 @@ public sealed class DiscussionDataSource : IDiscussionDataSource
 
     public async Task AddMessageAsync(DiscussionMessage discussionMessage, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(discussionMessage);
+
         // Only the message is new; room and author were read without tracking.
         _dbContext.Entry(discussionMessage).State = EntityState.Added;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateMessageAsync(DiscussionMessage discussionMessage, CancellationToken cancellationToken)
     {
-        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
-        var query = _dbContext.DiscussionMessages
-            .Where(message => message.Id == discussionMessage.Id && !message.DiscussionRoom.IsClosed);
+        ArgumentNullException.ThrowIfNull(discussionMessage);
 
-        int count;
-        if (discussionMessage.IsDeleted)
-        {
-            count = await query.ExecuteUpdateAsync(setters => setters
-                .SetProperty(message => message.IsDeleted, true)
-                .SetProperty(message => message.DeletedAtUtc, discussionMessage.DeletedAtUtc ?? now)
-                .SetProperty(message => message.UpdatedAtUtc, now), cancellationToken);
-        }
-        else
-        {
-            count = await query.ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(message => message.Content, discussionMessage.Content)
-                    .SetProperty(message => message.EditedAtUtc, discussionMessage.EditedAtUtc)
-                    .SetProperty(message => message.UpdatedAtUtc, now),
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.RepeatableRead, cancellationToken);
+        DiscussionMessage? existingMessage = await _dbContext.DiscussionMessages
+            .SingleOrDefaultAsync(message => message.Id == discussionMessage.Id && !message.DiscussionRoom.IsClosed,
                 cancellationToken);
-        }
 
-        if (count == 0)
+        if (existingMessage == null)
         {
             throw new ConflictException("The message was deleted or its room is no longer writable.");
         }
 
-        discussionMessage.UpdatedAtUtc = now;
+        if (discussionMessage.IsDeleted)
+        {
+            _dbContext.DiscussionMessages.Remove(existingMessage);
+        }
+        else
+        {
+            existingMessage.Content = discussionMessage.Content;
+            existingMessage.EditedAtUtc = discussionMessage.EditedAtUtc;
+        }
+
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            discussionMessage.UpdatedAtUtc = existingMessage.UpdatedAtUtc;
+            discussionMessage.DeletedAtUtc = existingMessage.DeletedAtUtc;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException("The message was deleted or its room is no longer writable.");
+        }
     }
 
     private IQueryable<DiscussionMessage> HistoryQuery()

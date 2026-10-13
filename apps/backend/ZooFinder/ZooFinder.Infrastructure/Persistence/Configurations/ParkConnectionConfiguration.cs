@@ -11,6 +11,7 @@ internal sealed class ParkConnectionConfiguration : IEntityTypeConfiguration<Par
     {
         builder.ToTable("ParkConnectionRequests");
         builder.ConfigureBase();
+        builder.Property(request => request.Status).IsConcurrencyToken();
         builder.Property(request => request.ContactName).HasMaxLength(ParkConnectionConstraints.MaximumContactNameLength);
         builder.Property(request => request.Contact).HasMaxLength(ParkConnectionConstraints.MaximumContactLength);
         builder.Property(request => request.Comment).HasMaxLength(ParkConnectionConstraints.MaximumCommentLength);

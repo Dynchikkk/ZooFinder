@@ -122,6 +122,10 @@ changing providers requires reviewing index syntax, null handling, comparison be
 Infrastructure owns mappings, indexes, transactions, filtering, sources, and the future Initial migration.
 No general-purpose repository base class or UnitOfWork is introduced.
 
+Business reads use `AsNoTracking`; write methods query tracked entities and assign only fields owned by that operation.
+All data-source writes go through `SaveChangesAsync`. There are no direct ExecuteUpdate/ExecuteDelete writes.
+Data sources depend on DbContext; timestamps are centralized in DbContext rather than supplied by a second clock dependency.
+
 | Entity | Constraint |
 | --- | --- |
 | `Animal` | Unique `(InformationSource, LanguageCode, SourceItemId)` |
@@ -147,6 +151,14 @@ deletions to soft deletion, set deletion/update times, and use `TimeProvider` fo
 Inserts receive creation/update timestamps; normal updates preserve creation time.
 Converters write UTC and restore `DateTime.Kind` when reading.
 
+Normal updates preserve deletion fields. `Restore(...)` accepts a tracked, previously deleted entity;
+SaveChanges recognizes its deleted-to-active transition, clears deletion time, and preserves ID/creation time.
+Deleting a tracked entity still uses EF's Deleted state and is converted to a soft-delete update.
+
+`IsDeleted` is an EF concurrency token for all entities. Refresh sessions additionally use their hash,
+revocation time, and expiration time; connection requests use their status. These are existing fields, not new
+version columns, and configuring their concurrency role does not require a new database schema.
+
 Global filters hide deleted rows. Related visibility filters hide profiles/sessions of deleted accounts,
 rooms/messages of deleted animals or rooms, memberships of deleted parks/animals, and requests of deleted parks.
 Filtering does not modify or cascade-delete child rows. Unique identities remain reserved.
@@ -158,32 +170,46 @@ Application rejects a suspended park after reading its status.
 History queries bypass filters to retain deleted messages and author information, then reapply room/animal
 visibility. Application hides deleted content by returning null. Deleted authors do not erase history.
 
-Bulk updates explicitly apply activity/visibility predicates and timestamps because they bypass SaveChanges.
+Write queries apply activity/visibility predicates before changing tracked rows. Related-row checks are protected
+by short RepeatableRead transactions; queries alone and concurrency tokens on a child row do not protect its parents.
 Sources do not use physical ExecuteDelete or raw SQL deletes.
 
 ## Atomic Operations and Concurrency
 
 - Account registration stores account, profile, and initial session in one SaveChanges transaction.
-  After a write conflict, it detaches the failed graph and checks for a competing normalized login,
+  After a write conflict, it checks for a competing normalized login,
   including deleted accounts. Only a confirmed duplicate returns false; other database errors are rethrown.
-- Refresh rotation conditionally updates the expected hash while checking session expiry, revocation,
-  deletion, and account state. Competing rotations cannot both update the same expected hash.
-- Shared card/room registration uses a serializable transaction. Matching checks source identity,
-  scientific name, then normalized title within a language. Ambiguous matches, conflicting scientific names,
-  or deleted canonical records produce a conflict. After DbUpdateException, an existing exact sourced room
-  can be returned; other failures are rethrown.
+- Refresh rotation queries the expected hash while checking session expiry, revocation, deletion, and account state
+  inside RepeatableRead, then changes the tracked session and saves. Concurrency conflicts return false;
+  competing rotations cannot both successfully save the same expected hash. Other storage errors are rethrown.
+  Session revocation also uses tracked writes; revoke-all uses Serializable to protect the selected account's session range.
+- Shared card/room registration uses a serializable transaction. One query matches only
+  `InformationSource + SourceItemId + LanguageCode` and loads the card's rooms, including deleted records.
+  Deleted cards or General rooms produce a conflict. The operation returns an existing room, adds a missing
+  room to the matched card, or creates both records. Storage errors end the operation; registration does not
+  recover through a second lookup after a failed write.
 - Park slug reservation and membership batches use serializable transactions. Batch members are validated
   before link writes. Shared cards/rooms are registered beforehand in separate transactions and may survive
-  a later membership failure. Membership upsert reads existing link IDs, restores/updates those rows directly,
-  and tracks only new links for insertion. It reads the saved links with their Animals without tracking before
-  commit, returning them in input order rather than manually copying database changes into detached objects.
-  Animals are checked for visibility without adding them to the change tracker. Transaction disposal rolls
-  back an unsuccessful batch; newly added links are detached on failure.
-- Connection submission prevents two unfinished requests. Transitions conditionally update the expected state
-  without changing park availability.
+  a later membership failure. Membership upsert loads canonical tracked Animals and existing links including
+  soft-deleted links, restores/updates existing rows, and tracks only a fresh link for each insertion. One SaveChanges
+  persists the link batch; results use those tracked instances in input order without a second result query.
+  Transaction disposal rolls back an unsuccessful batch; the failure ends the operation.
+- Connection submission prevents two unfinished requests. Transitions query the expected state inside RepeatableRead
+  and save the tracked request with status/deletion concurrency tokens, without changing park availability.
 - Adding a session/message tracks only the new row, avoiding reinsertion of detached account/room graphs.
 - Profile updates require an active account and change display name/update time.
+  Profile/message/membership updates query tracked rows inside RepeatableRead so related visibility/state checks
+  remain valid until commit. Message deletion uses the common soft-delete handling; saved timestamps are copied
+  back to the supplied message so published events use the persisted deletion time.
   Message updates cannot restore a concurrently deleted message or write to a closed room.
+
+Read methods retain detached snapshots; write results from registration/upsert may be tracked within the current context.
+Sources do not attach detached navigation graphs for updates. Failures that end an operation do not manually detach
+entities or clear the tracker; the context is disposed at the end of its scope. Current callers of failed Try writes
+throw a business error and do not continue saving. Shared registration also stops on a failed write;
+there is no recovery path that continues saving with failed inserts in the tracker.
+RepeatableRead/Serializable may produce database deadlocks under contention. No automatic retry or provider-specific
+deadlock translation is implemented; these failures remain storage errors rather than successful operations.
 
 These behaviors describe implementation, not completed SQL Server concurrency testing.
 Such testing belongs to the final verification stage.

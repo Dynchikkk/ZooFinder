@@ -11,7 +11,7 @@ public interface IAnimalRegistrationDataSource
         string languageCode,
         CancellationToken cancellationToken);
 
-    // Atomically reuses a matching species and room or creates both.
+    // Atomically reuses an animal with the same source identity and its room, or creates missing records.
     Task<DiscussionRoom> GetOrCreateAsync(
         Animal animal,
         DiscussionRoom generalRoom,

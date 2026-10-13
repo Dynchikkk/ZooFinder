@@ -75,7 +75,9 @@ Rules:
 - `SourceUrl` is resolved by the information provider and is not persisted.
 - Search results are not persisted.
 - An animal is persisted when its General discussion room is created. The room may initially contain no messages.
-- Shared registration is used by park additions, imports, and explicit discussion creation. It creates a card and General room together, or reuses both by source identity, scientific name, or normalized title within the same language. Conflicting scientific names are not merged solely by title.
+- Shared registration is used by park additions, imports, and explicit discussion creation. It creates a card and General
+  room together, or reuses them by `InformationSource + SourceItemId + LanguageCode`. Scientific names and titles
+  do not merge cards from different source identities.
 
 ## Parks
 

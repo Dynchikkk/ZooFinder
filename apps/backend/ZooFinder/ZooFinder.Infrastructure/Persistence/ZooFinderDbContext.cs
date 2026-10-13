@@ -83,6 +83,22 @@ public sealed class ZooFinderDbContext : DbContext
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
+    public void Restore<TEntity>(TEntity entity) where TEntity : IdEntity<Guid>
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        var entry = Entry(entity);
+
+        if ((entry.State != EntityState.Unchanged && entry.State != EntityState.Modified) ||
+            !entry.Property(candidate => candidate.IsDeleted).OriginalValue)
+        {
+            throw new InvalidOperationException("Only a tracked, previously deleted entity can be restored.");
+        }
+
+        entity.IsDeleted = false;
+        entity.DeletedAtUtc = null;
+    }
+
     private void PrepareChanges()
     {
         ChangeTracker.DetectChanges();
@@ -105,10 +121,22 @@ public sealed class ZooFinderDbContext : DbContext
                     break;
 
                 case EntityState.Modified:
+                    bool isRestored = entry.Property(entity => entity.IsDeleted).OriginalValue && !entry.Entity.IsDeleted;
                     entry.Entity.UpdatedAtUtc = now;
 
+                    if (isRestored)
+                    {
+                        entry.Entity.DeletedAtUtc = null;
+                    }
+                    else
+                    {
+                        entry.Entity.IsDeleted = entry.Property(entity => entity.IsDeleted).OriginalValue;
+                        entry.Entity.DeletedAtUtc = entry.Property(entity => entity.DeletedAtUtc).OriginalValue;
+                    }
+
                     entry.Property(entity => entity.CreatedAtUtc).IsModified = false;
-                    entry.Property(entity => entity.IsDeleted).IsModified = false;
+                    entry.Property(entity => entity.IsDeleted).IsModified = isRestored;
+                    entry.Property(entity => entity.DeletedAtUtc).IsModified = isRestored;
                     entry.Property(entity => entity.UpdatedAtUtc).IsModified = true;
                     break;
 

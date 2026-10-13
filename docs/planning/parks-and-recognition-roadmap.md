@@ -18,7 +18,7 @@ Payment gateways, subscriptions, and owner-based authorization are deferred.
 
 Recognition targets species, not individuals. Health, enclosures, tickets, organizations, and employees are outside v1.
 The Animal card and General chat are shared; two parks create two ParkAnimal associations to one card.
-Matching scientific name/source identity or a non-conflicting normalized title permits reuse within a language.
+Cards and chats are reused only by `InformationSource + SourceItemId + LanguageCode`.
 A complete language-independent Species/Taxon identity does not yet exist.
 
 Neural models are ready pretrained models with published weights, running entirely locally.

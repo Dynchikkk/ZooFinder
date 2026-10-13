@@ -68,8 +68,8 @@ Ordinary siblings are independent; Common and Shared are explicit shared excepti
 
 AnimalRegistrationService is used by Parks and Discussions.
 IAnimalRegistrationDataSource creates or reuses the card together with its General room.
-Matching checks source identity, scientific name, then normalized title within the same language.
-Ambiguous matches and conflicting scientific names are not merged automatically.
+Registration matches only `InformationSource + SourceItemId + LanguageCode`.
+Scientific names and titles do not merge cards from different source identities.
 AnimalRegistrationResult returns AnimalId and GeneralRoomId.
 
 HasStartedDiscussion remains derived from LocalAnimalId: a saved card has a room even if it has no messages.
