@@ -2,9 +2,9 @@
 
 `ZooFinder.Api` is the future HTTP transport and composition root.
 
-**Status:** Only Program.cs, project configuration, and settings exist. Program adds controllers/OpenAPI,
+**Status:** Program.cs remains a scaffold alongside project configuration and settings. Program adds controllers/OpenAPI,
 maps controllers, and invokes HTTPS redirection/authorization middleware. No business controllers,
-Application/Infrastructure registrations, bearer authentication configuration, exception mapping,
+runtime Application/Infrastructure registrations, bearer authentication configuration, exception mapping,
 upload decoder, CSV parser, or SignalR Hub is implemented.
 
 The following sections describe required future behavior. Architectural boundaries are defined in
@@ -78,7 +78,14 @@ Bearer access tokens, refresh endpoints, and existing account rules are planned 
 contracts. Refresh-session revocation does not require persisting access tokens.
 
 Composition must register Application services, nine data sources, providers/security/event implementations,
-DbContext, settings, and TimeProvider. A future Infrastructure registration helper is planned but absent.
+DbContext, settings, and TimeProvider. All IServiceCollection registration helpers belong to API.
+No business DI helpers are currently implemented; registration is deferred until API development.
+JwtAccessTokenProvider validates issuer, audience, Base64 signing key, and lifetime when constructed.
+
+The implemented provider issues HS256 JWTs with `sub` as account ID and `role` as the Domain role name.
+Future bearer configuration must validate signature, HS256, issuer, audience, and lifetime using matching settings,
+disable inbound claim mapping, and use `sub`/`role` as name/role claim types. The signing key must come from secure
+runtime configuration. The future composition root will register AuthService, AuthSettings, and the security implementations.
 
 Event transport/Hub placement must preserve the direction of dependencies: Infrastructure cannot reference Api.
 No runtime database creation/migration should be inferred from the current Program scaffold.

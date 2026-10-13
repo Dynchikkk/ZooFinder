@@ -2,15 +2,16 @@
 
 `ZooFinder.Infrastructure` implements Application data sources and technical dependencies.
 
-**Status:** EF persistence is implemented. Wiki/Python providers, security implementations, event publishing,
-and runtime dependency registration are not implemented. Global boundaries are in
+**Status:** EF persistence and Auth security implementations are implemented. Auth registration belongs to API;
+Wiki/Python providers, event publishing, and complete runtime composition are not implemented. Global boundaries are in
 [General architecture](../architecture.md). Placement rules for this layer are defined below;
 tests and migration policy are in [Development rules](../development.md).
 
 ## Implementation Placement Rules
 
-Infrastructure has Persistence, Modules, and a future DependencyInjection composition helper.
-There is no separate Common root.
+Infrastructure has Persistence and Modules. There is no separate Common root.
+Dependency-injection registration belongs to the API composition root; Infrastructure contains implementations
+and their technical settings, not IServiceCollection registration helpers.
 
 Map an Application interface under Modules to the same recursive path in Infrastructure.
 Map Application/Common/<Module>/... to Infrastructure/Modules/<Module>/...
@@ -47,7 +48,15 @@ ZooFinder.Infrastructure/
 │  │     ├─ Catalog/DataSources/AnimalCatalogDataSource.cs
 │  │     └─ Recognition/DataSources/AnimalRecognitionDataSource.cs
 │  ├─ Auth/
-│  │  └─ DataSources/AuthDataSource.cs
+│  │  ├─ DataSources/AuthDataSource.cs
+│  │  └─ Dependencies/
+│  │     ├─ AccessToken/
+│  │     │  ├─ JwtAccessTokenProvider.cs
+│  │     │  ├─ JwtAccessTokenSettings.cs
+│  │     │  └─ JwtAccessTokenSettingsValidator.cs
+│  │     ├─ PasswordHashing/IdentityPasswordHasher.cs
+│  │     ├─ RefreshTokenGeneration/CryptographicRefreshTokenGenerator.cs
+│  │     └─ RefreshTokenHashing/Sha256RefreshTokenHasher.cs
 │  ├─ Parks/
 │  │  ├─ DataSources/
 │  │  │  ├─ ParkCatalogDataSource.cs
@@ -86,17 +95,21 @@ Namespaces match placement; sources explicitly import the shared Persistence con
 | `IAnimalRegistrationDataSource` | `AnimalRegistrationDataSource` | Implemented |
 | `IAnimalInformationProvider` | Wiki adapter | Pending |
 | `IAnimalRecognitionProvider` | HTTP adapter to local Python | Pending |
-| Auth hashing/token interfaces | Security implementations | Pending |
+| `IPasswordHasher` | `IdentityPasswordHasher` | Implemented |
+| `IRefreshTokenGenerator` | `CryptographicRefreshTokenGenerator` | Implemented |
+| `IRefreshTokenHasher` | `Sha256RefreshTokenHasher` | Implemented |
+| `IAccessTokenProvider` | `JwtAccessTokenProvider` | Implemented |
 | `IDiscussionEventPublisher` | Discussion event transport | Pending |
 
-Future provider/security/event implementations follow the same merged-path rule under Dependencies.
+Provider/security/event implementations follow the same merged-path rule under Dependencies.
 Examples are Modules/Animals/Modules/Recognition/Dependencies/AnimalRecognition,
 Modules/Animals/Dependencies/AnimalInformation, and Modules/Auth/Dependencies/PasswordHashing.
-These implementations and directories are not present yet; do not create empty scaffolding for them.
+Provider/event implementations and directories are not present yet; do not create empty scaffolding for them.
 HTTP models and provider settings belong to the concrete integration; Application contracts remain in Application.
 The Python model is selected inside Python, without requiring a separate .NET provider for each model.
 
-A future `AddInfrastructure(...)` registration helper is planned. It has not been added; API is still a scaffold.
+API owns dependency-injection registration. No business DI helpers are implemented;
+registration is deferred until API development. Program remains a scaffold.
 The concrete SignalR/Hub placement and transport composition must be resolved during that implementation;
 Infrastructure must not reference Api.
 
@@ -161,7 +174,11 @@ Sources do not use physical ExecuteDelete or raw SQL deletes.
   can be returned; other failures are rethrown.
 - Park slug reservation and membership batches use serializable transactions. Batch members are validated
   before link writes. Shared cards/rooms are registered beforehand in separate transactions and may survive
-  a later membership failure.
+  a later membership failure. Membership upsert reads existing link IDs, restores/updates those rows directly,
+  and tracks only new links for insertion. It reads the saved links with their Animals without tracking before
+  commit, returning them in input order rather than manually copying database changes into detached objects.
+  Animals are checked for visibility without adding them to the change tracker. Transaction disposal rolls
+  back an unsuccessful batch; newly added links are detached on failure.
 - Connection submission prevents two unfinished requests. Transitions conditionally update the expected state
   without changing park availability.
 - Adding a session/message tracks only the new row, avoiding reinsertion of detached account/room graphs.
@@ -233,11 +250,39 @@ The HTTP wire schema, service URL/timeouts, error mapping, and concrete model ad
 Images, recognition history, and experiment tables are not persisted.
 Research plans and proposed extensions are documented separately in the [roadmap](../planning/parks-and-recognition-roadmap.md).
 
-## Security and Events — Pending
+## Auth Security — Implemented
 
-Application already defines hashing, token generation, access-token production, and event publishing ports.
-Planned security behavior includes short-lived bearer access tokens, cryptographic refresh tokens,
-hash-only refresh-token storage, and rotation. No concrete JWT/hash implementation is present.
+Security implementations use the existing Application ports without adding an Identity user store or changing
+AuthService's registration, login, refresh rotation, or revocation scenarios.
+
+- `IdentityPasswordHasher` wraps ASP.NET Core Identity's versioned password format: PBKDF2-HMAC-SHA512,
+  220,000 iterations, a random 128-bit salt, and a 256-bit derived key. Identity performs constant-time hash
+  comparison. Empty, malformed, and unsupported stored hashes fail verification. A successful legacy hash
+  verification is accepted, but the current boolean Application port does not support automatic rehashing.
+- `CryptographicRefreshTokenGenerator` produces 32 cryptographically random bytes encoded as unpadded Base64url.
+- `Sha256RefreshTokenHasher` hashes the exact UTF-8 token to a 64-character uppercase SHA-256 hexadecimal value.
+  AuthService owns input normalization; only the hash reaches persistence. Passwords use the slow salted hasher,
+  while refresh tokens already contain 256 bits of random entropy.
+- `JwtAccessTokenProvider` signs HS256 JWTs. Claims are `sub` (account ID), `role` (enum name), unique `jti`,
+  numeric `iat`, `nbf`, `exp`, `iss`, and `aud`. UTC time comes from `TimeProvider`. Deleted/inactive accounts,
+  empty account IDs, and unsupported roles cannot receive tokens.
+
+`JwtAccessTokenSettings` belongs to Dependencies/AccessToken. Issuer and audience are required;
+`SigningKeyBase64` must decode to at least 32 bytes. Supply a cryptographically random key through secure runtime
+configuration, never a committed/default secret. Lifetime defaults to 15 minutes and must be between one second
+and one hour. Invalid settings fail when the provider is constructed, including resolution through DI.
+
+The future API composition root will register the four security implementations, their settings, `IAuthDataSource`,
+`ZooFinderDbContext`, `AuthSettings`, `IAuthService`/`AuthService`, and `TimeProvider`.
+Business DI helpers are deliberately deferred until API development. There is no runtime database connection
+registration or schema initialization.
+
+Bearer validation remains API work: require HS256, validate signature, issuer, audience, and lifetime using the same
+key/settings; disable inbound claim mapping and use `sub`/`role` as the name/role claim types.
+Revoking refresh sessions does not invalidate already issued access tokens; they remain valid until expiry.
+HTTP authentication, controllers, and an end-to-end SQL Server Auth flow are not implemented or verified yet.
+
+## Discussion Events — Pending
 
 The publisher uses dependency-owned `DiscussionMessageEvent`, not service responses.
 Message persistence and publishing are separate operations; no outbox or reliable-delivery implementation exists.

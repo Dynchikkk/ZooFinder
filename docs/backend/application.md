@@ -3,8 +3,9 @@
 `ZooFinder.Application` contains use cases, validation, contracts, and the interfaces required to execute them.
 It depends on Domain and has no EF, HTTP, SignalR, or dependency-injection framework dependency.
 
-**Status:** Eleven services and their contracts are implemented. Infrastructure providers and API wiring
-are still pending. Global layer boundaries are defined in [General architecture](../architecture.md).
+**Status:** Eleven services and their contracts are implemented. Infrastructure Auth security implementations
+are available; animal providers, event publishing, and API wiring are still pending.
+Global layer boundaries are defined in [General architecture](../architecture.md).
 Application-specific placement and module-dependency rules are defined below; formatting is defined in
 [Code style](../code-style.md).
 
@@ -320,7 +321,14 @@ produce an authentication error. Refresh validates the account/session and condi
 token hash; a concurrent or inactive session fails rotation. `AuthSettings.RefreshSessionLifetime`
 controls expiration; `TimeProvider` supplies UTC time.
 
-Concrete hashing, token-generation, and access-token implementations remain pending.
+`TimeProvider` is the standard .NET abstract class, not a project-defined service. Its virtual `GetUtcNow()`
+provides a replaceable clock; `TimeProvider.System` uses the system clock. Passing this abstraction into services
+allows later verification of expiration without waiting for real time. No custom clock interface or implementation
+is currently defined in the project.
+
+Concrete password hashing, refresh-token generation/hashing, and JWT access-token implementations are available
+in Infrastructure. The boolean password verification port does not support automatic legacy-hash upgrades.
+Runtime composition, bearer validation, and HTTP endpoints remain pending.
 
 ## Discussions
 

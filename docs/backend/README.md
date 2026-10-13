@@ -26,11 +26,12 @@ is implemented. Infrastructure has no reference to Api; Domain references no oth
 | --- | --- | --- |
 | Domain | Entities, relationships, enums | Nine entities implemented |
 | Application | Scenarios, validation, contracts, dependency interfaces | Eleven services implemented |
-| Infrastructure | Persistence and technical dependency implementations | Nine data sources and EF mappings implemented |
+| Infrastructure | Persistence and technical dependency implementations | Nine data sources, EF mappings, and Auth security implemented |
 | Api | HTTP transport, authentication, exception mapping, composition | Program/configuration scaffold only |
 
-Wiki/Python providers, security implementations, event transport, runtime DI, controllers, and upload handling
-remain pending. There is no initialized migration set or complete runnable business flow.
+Wiki/Python providers, event transport, complete runtime DI, controllers, and upload handling remain pending.
+Auth security implementations are available; DI registration is deferred until API development.
+There is no initialized migration set or complete runnable business flow.
 
 Mandatory rules are maintained separately in [Architecture rules](../architecture.md),
 [Development process](../development.md), and [Code style](../code-style.md).
@@ -61,6 +62,7 @@ The existing AuthService retains all its related operations inside Authenticatio
 Infrastructure places implementations under Modules. Application/Common/<Module> merges into that same
 Infrastructure module, while nested primary modules preserve their recursive path.
 Shared DbContext/configurations/database cursors remain in Persistence.
+Dependency-injection registration helpers belong to API alongside the composition root.
 
 ## Implemented Application Flows
 

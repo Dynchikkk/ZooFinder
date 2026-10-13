@@ -3,8 +3,8 @@
 ZooFinder is a web-platform project for animal discovery, photo-based species recognition in nature and
 safari parks, and shared animal discussions.
 
-**Status:** Domain, Application, and EF persistence are implemented. The API remains a scaffold.
-Wiki integration, the local Python recognition service/client, security implementations, event publishing,
+**Status:** Domain, Application, EF persistence, and Auth security implementations are available. The API remains a scaffold.
+Wiki integration, the local Python recognition service/client, event publishing, complete API composition,
 frontend, and deployment configuration are pending. There is no working end-to-end application yet.
 
 ## Product Scope
