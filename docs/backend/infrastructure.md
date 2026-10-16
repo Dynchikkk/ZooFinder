@@ -1,6 +1,6 @@
 # Infrastructure Layer
 
-Infrastructure implements Application dependencies with EF Core/SQL Server and Auth security.
+Infrastructure implements Application dependencies with EF Core/SQL Server, Auth security, and Wikipedia retrieval.
 See [Backend](README.md) for pending integrations.
 
 ## Placement Rules
@@ -156,10 +156,31 @@ Invalid settings fail construction.
 
 ### Wiki
 
-- Keep transport DTOs/settings inside the adapter.
-- Map unavailability to AnimalInformationUnavailableException.
-- Keep cancellation and invalid output distinct.
-- Source URLs come from verified provider identities, not model output.
+- The HTTP adapter uses the MediaWiki Action API on the fixed en/ru Wikipedia hosts.
+- Identity is `wikipedia` + canonical positive numeric page ID + language; page moves preserve identity.
+- Search preserves provider ranking and binds continuation to the exact query, language, and page size.
+- Missing, redirect, non-article, and disambiguation pages cannot supply card details.
+  Search can return fewer items than requested while still having a continuation.
+- Search is general Wikipedia search, without taxonomic verification. ScientificName stays null;
+  no name is guessed from article text. Wikidata enrichment is not implemented.
+- Details contain a plain-text introductory extract (approximately 1,200 characters), an optional Wikimedia
+  thumbnail, and an attribution URL derived from the verified page ID. Empty extracts/images are allowed.
+- HTTP/network failures, timeouts, and temporary API errors map to AnimalInformationUnavailableException.
+  Caller cancellation propagates; malformed, oversized, or inconsistent output raises InvalidOperationException.
+- Only successful search/details results are cached; missing details and errors are not cached.
+  There are no automatic retries or stale-cache fallback.
+
+Transport DTOs and settings stay inside Dependencies/AnimalInformation.
+API composition must supply HttpClient, settings, and a shared IMemoryCache with a size limit.
+Each cached response has size 1; the host chooses the maximum number of entries.
+UserAgent is required and must identify the client and provide real operator contact information, following
+the [Wikimedia policy](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy).
+Defaults: 10-second request timeout, 2 MiB response limit, 2-minute search cache, 15-minute details cache.
+The dependency's settings validator checks header syntax and configuration limits at client construction without mutating settings.
+The timeout covers both headers and body; an earlier HttpClient timeout may also end a request.
+
+Basic en/ru search, continuation, details, missing pages, disambiguation, and cache reuse have been checked
+manually against Wikipedia. Runtime API composition and end-to-end flows remain pending.
 
 ### Recognition
 

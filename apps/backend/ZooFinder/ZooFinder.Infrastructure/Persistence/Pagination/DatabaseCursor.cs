@@ -6,12 +6,21 @@ using ZooFinder.Application.Shared.Pagination.Contracts;
 
 namespace ZooFinder.Infrastructure.Persistence.Pagination;
 
-internal sealed record DatabaseCursor(
-    int Version,
-    string Scope,
-    DateTime CreatedAtUtc,
-    Guid Id)
+internal sealed class DatabaseCursor
 {
+    private const int MaximumEncodedCursorLength = 1024;
+
+    public string Scope { get; init; }
+    public DateTime CreatedAtUtc { get; init; }
+    public Guid Id { get; init; }
+
+    public DatabaseCursor(string scope, DateTime createdAtUtc, Guid id)
+    {
+        Scope = scope;
+        CreatedAtUtc = createdAtUtc;
+        Id = id;
+    }
+
     public static string GetScope(params string[] values)
     {
         return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(values)));
@@ -31,13 +40,13 @@ internal sealed record DatabaseCursor(
 
         try
         {
-            if (request.Cursor.Length > 1024)
+            if (request.Cursor.Length > MaximumEncodedCursorLength)
             {
                 throw new FormatException();
             }
 
             var cursor = JsonSerializer.Deserialize<DatabaseCursor>(Convert.FromBase64String(request.Cursor));
-            if (cursor == null || cursor.Version != 1 || cursor.Scope != scope ||
+            if (cursor == null || cursor.Scope != scope ||
                 cursor.Id == Guid.Empty || cursor.CreatedAtUtc.Kind != DateTimeKind.Utc)
             {
                 throw new FormatException();
@@ -58,6 +67,6 @@ internal sealed record DatabaseCursor(
     public static string Encode(string scope, DateTime createdAtUtc, Guid id)
     {
         return Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(
-            new DatabaseCursor(1, scope, DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc), id)));
+            new DatabaseCursor(scope, DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc), id)));
     }
 }

@@ -2,6 +2,13 @@
 
 These rules are mandatory when writing or modifying project code. Consult this document before working with code.
 
+## Classes and Records
+
+- Use ordinary classes for entities, services, helpers, settings, and internal implementation types.
+- Use records only for data contracts, such as requests, responses, events, and integration DTOs.
+- Serialization alone does not make an internal helper a contract; cursor classes with parsing/encoding logic remain classes.
+- Do not choose a record merely to shorten a class declaration or generate its constructor and properties.
+
 ## Line Length and Wrapping
 
 - The maximum code line length is 130 characters, including indentation.

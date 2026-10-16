@@ -11,11 +11,11 @@ Layer responsibilities and dependency rules are in [Architecture](../architectur
 | Domain/Application | Nine entities; eleven services and their contracts | End-to-end verification |
 | Persistence | EF Core/SQL Server context, mappings, nine data sources | Runtime connection, agreed schema, Initial migration |
 | Auth security | Password hashing, refresh-token generation/hashing, JWT issuance | Bearer validation and HTTP composition |
-| Integrations | Wiki, recognition, and discussion-event interfaces | Concrete Wiki/Python/event implementations |
+| Integrations | Wikipedia HTTP adapter with caching; recognition/event interfaces | Wiki composition; Python/event implementations |
 | API | Program/configuration scaffold | Controllers, DI, errors, uploads, CSV, authentication |
 
-There is no complete runnable business flow. Builds have passed; live SQL Server concurrency and provider
-integration are not verified. Frontend and deployment remain pending.
+There is no complete runnable business flow. Basic Wikipedia calls have been checked manually;
+live SQL Server concurrency and end-to-end integration are not verified. Frontend and deployment remain pending.
 
 ## Layer Documents
 

@@ -34,7 +34,7 @@ Recognition history and visitor-photo persistence are not implemented.
 
 ## Integration Work
 
-1. Implement Wiki retrieval, timeouts, client identification, source attribution, and caching.
+1. Compose the existing Wikipedia adapter; decide whether taxonomic filtering and Wikidata enrichment are needed.
 2. Implement API composition, bearer validation, endpoints/errors, upload validation, and event transport.
 3. Agree the .NET/Python wire protocol and connect one local model.
 4. Build recognition UI, then park editing, CSV preview/apply, and connection tracking.

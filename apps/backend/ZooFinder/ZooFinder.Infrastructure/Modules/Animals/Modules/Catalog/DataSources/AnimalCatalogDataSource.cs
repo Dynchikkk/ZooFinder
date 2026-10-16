@@ -9,6 +9,8 @@ namespace ZooFinder.Infrastructure.Modules.Animals.Modules.Catalog.DataSources;
 
 public sealed class AnimalCatalogDataSource : IAnimalCatalogDataSource
 {
+    private const string AnimalCatalogCursorScope = "animals";
+
     private readonly ZooFinderDbContext _dbContext;
 
     public AnimalCatalogDataSource(ZooFinderDbContext dbContext)
@@ -37,7 +39,7 @@ public sealed class AnimalCatalogDataSource : IAnimalCatalogDataSource
         CursorPageRequest pageRequest,
         CancellationToken cancellationToken)
     {
-        string scope = DatabaseCursor.GetScope("animals", searchTerm, languageCode);
+        string scope = DatabaseCursor.GetScope(AnimalCatalogCursorScope, searchTerm, languageCode);
         var cursor = DatabaseCursor.Parse(pageRequest, scope);
         var query = _dbContext.Animals
             .AsNoTracking()

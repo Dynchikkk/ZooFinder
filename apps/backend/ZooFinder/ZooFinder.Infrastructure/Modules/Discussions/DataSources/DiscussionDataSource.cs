@@ -12,6 +12,8 @@ namespace ZooFinder.Infrastructure.Modules.Discussions.DataSources;
 
 public sealed class DiscussionDataSource : IDiscussionDataSource
 {
+    private const string MessageHistoryCursorScope = "messages";
+
     private readonly ZooFinderDbContext _dbContext;
 
     public DiscussionDataSource(ZooFinderDbContext dbContext)
@@ -55,7 +57,7 @@ public sealed class DiscussionDataSource : IDiscussionDataSource
         CursorPageRequest pageRequest,
         CancellationToken cancellationToken)
     {
-        string scope = DatabaseCursor.GetScope("messages", discussionRoomId.ToString("N"));
+        string scope = DatabaseCursor.GetScope(MessageHistoryCursorScope, discussionRoomId.ToString("N"));
         var cursor = DatabaseCursor.Parse(pageRequest, scope);
         var query = HistoryQuery().Where(message => message.DiscussionRoomId == discussionRoomId);
         if (cursor != null)
