@@ -36,7 +36,7 @@ Recognition history and visitor-photo persistence are not implemented.
 
 1. Compose the existing Wikipedia adapter; decide whether taxonomic filtering and Wikidata enrichment are needed.
 2. Implement API composition, bearer validation, endpoints/errors, upload validation, and event transport.
-3. Agree the .NET/Python wire protocol and connect one local model.
+3. Implement the Python service against the [defined HTTP protocol](../backend/recognition-protocol.md) and connect one local model.
 4. Build recognition UI, then park editing, CSV preview/apply, and connection tracking.
 5. After schema agreement, create Initial, configure deployment, and verify end-to-end flows.
 6. Add automated tests at the final stage, then further model adapters and research runs.
@@ -79,7 +79,8 @@ Confidence scores and context hashes are not implemented.
 
 ### Proposed Endpoints
 
-These endpoints are not implemented.
+Python endpoints are not implemented. POST /v1/recognize follows the [HTTP protocol](../backend/recognition-protocol.md);
+health/model routes remain proposals.
 
 | Endpoint | Purpose |
 | --- | --- |
@@ -88,11 +89,10 @@ These endpoints are not implemented.
 | GET /health/ready | Model readiness |
 | GET /v1/model | Loaded-profile metadata |
 
-Before integration, agree:
+Before live integration, determine:
 
-- Field names and status values.
-- URL configuration, timeouts, and response limits.
-- Invalid decoding and overload handling.
+- Deployment URL, operational timeouts, and capacity.
+- Python decoding and overload implementation following the protocol.
 - Target hardware, CPU/GPU use, and acceptable model size.
 
 Prepare dependencies/weights locally.

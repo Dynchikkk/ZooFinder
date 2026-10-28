@@ -11,7 +11,7 @@ Layer responsibilities and dependency rules are in [Architecture](../architectur
 | Domain/Application | Nine entities; eleven services and their contracts | End-to-end verification |
 | Persistence | EF Core/SQL Server context, mappings, nine data sources | Runtime connection, agreed schema, Initial migration |
 | Auth security | Password hashing, refresh-token generation/hashing, JWT issuance | Bearer validation and HTTP composition |
-| Integrations | Wikipedia HTTP adapter with caching; recognition/event interfaces | Wiki composition; Python/event implementations |
+| Integrations | Wikipedia and Python recognition HTTP adapters; event interface | API composition; Python service/model; event transport |
 | API | Program/configuration scaffold | Controllers, DI, errors, uploads, CSV, authentication |
 
 There is no complete runnable business flow. Basic Wikipedia calls have been checked manually;

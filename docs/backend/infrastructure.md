@@ -1,6 +1,6 @@
 # Infrastructure Layer
 
-Infrastructure implements Application dependencies with EF Core/SQL Server, Auth security, and Wikipedia retrieval.
+Infrastructure implements Application dependencies with EF Core/SQL Server, Auth security, Wikipedia, and Python recognition HTTP.
 See [Backend](README.md) for pending integrations.
 
 ## Placement Rules
@@ -184,10 +184,8 @@ manually against Wikipedia. Runtime API composition and end-to-end flows remain 
 
 ### Recognition
 
-- Use an HTTP adapter to local Python.
-- Python selects/loads the model through configuration.
-- Python has no database/Wiki access.
-- Application contracts exist; the wire schema is not agreed.
+- The Python HTTP adapter implements IAnimalRecognitionProvider using the [recognition protocol](recognition-protocol.md).
+- The Python service/model and live integration remain pending.
 
 Model/research plans belong to the [roadmap](../planning/parks-and-recognition-roadmap.md).
 
