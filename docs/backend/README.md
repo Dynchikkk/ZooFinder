@@ -9,10 +9,10 @@ Layer responsibilities and dependency rules are in [Architecture](../architectur
 | Component | Available | Pending |
 | --- | --- | --- |
 | Domain/Application | Nine entities; eleven services and their contracts | End-to-end verification |
-| Persistence | EF Core/SQL Server context, mappings, nine data sources | Runtime connection, agreed schema, Initial migration |
+| Persistence | EF Core/SQL Server context, mappings, nine data sources, runtime DB configuration | Agreed schema, Initial migration, live verification |
 | Auth security | Password hashing, refresh-token generation/hashing, JWT issuance | Bearer validation and HTTP composition |
-| Integrations | Wikipedia and Python recognition HTTP adapters; event interface | API composition; Python service/model; event transport |
-| API | Program/configuration scaffold | Controllers, DI, errors, uploads, CSV, authentication |
+| Integrations | Wiki/Python HTTP adapters and client configuration; event interface | Python service/model; event transport |
+| API | Core DI, configuration, startup validation | Controllers/module registration, errors, uploads, CSV, bearer authentication |
 
 There is no complete runnable business flow. Basic Wikipedia calls have been checked manually;
 live SQL Server concurrency and end-to-end integration are not verified. Frontend and deployment remain pending.

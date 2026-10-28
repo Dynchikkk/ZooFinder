@@ -1,6 +1,6 @@
 # API Layer
 
-API owns HTTP transport and composition. Program.cs is a scaffold.
+API owns HTTP transport and composition. Dependency/configuration setup is available; HTTP endpoints remain pending.
 See [Backend](README.md) for current implementation status.
 
 ## Transport Rules
@@ -51,10 +51,19 @@ Endpoint URLs/methods are not finalized.
 ### Composition
 
 - All IServiceCollection helpers belong to API.
-- Compose services, sources, providers, security/events, DbContext, settings, and TimeProvider during API development.
+- Runtime setup registers SQL Server DbContext, TimeProvider, Auth security/settings, Wiki/Python clients, and a bounded cache.
+- Application services and data sources are registered with their API modules; discussions await the event publisher.
 - Configure Application settings here; implementations do not register themselves.
 - Event/Hub composition must preserve dependency direction: Infrastructure cannot import API.
 - Runtime schema initialization is not implemented.
+
+Configuration sections are Auth, Jwt, Wiki, Recognition, and MemoryCache; SQL uses ConnectionStrings:ZooFinder.
+appsettings.json contains common defaults and placeholders for deployment-specific values; appsettings.Development.json supplies local values.
+The standard host loads the base file first, then environment-specific overrides; other environments must supply valid values.
+Supply Jwt:SigningKeyBase64 and an identifying Wiki:UserAgent through runtime configuration; no credentials are committed.
+Environment-variable keys use `__`, for example `Jwt__SigningKeyBase64` and `Wiki__UserAgent`.
+Startup validates configuration and constructs core dependencies without connecting to SQL Server or external services.
+Settings are bound at startup; changing them requires restarting the host.
 
 ### Bearer Validation
 
@@ -69,4 +78,4 @@ Use matching [JWT settings](infrastructure.md#auth-security).
 Refresh endpoints follow existing session rules.
 Access tokens are not persisted.
 
-Business controllers, DI, bearer authentication, errors, uploads, CSV, and event transport remain pending.
+Business controllers/module registration, bearer authentication, errors, uploads, CSV, and event transport remain pending.

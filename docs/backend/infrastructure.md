@@ -195,7 +195,7 @@ Model/research plans belong to the [roadmap](../planning/parks-and-recognition-r
 | --- | --- |
 | Factory override | ConnectionStrings__ZooFinder |
 | Factory fallback | ConnectionStrings:ZooFinder; local Windows authentication |
-| Runtime connection | Registration pending |
+| Runtime connection | API registration using ConnectionStrings:ZooFinder |
 
 Do not commit credentials.
 The application neither initializes nor migrates the database at startup.
