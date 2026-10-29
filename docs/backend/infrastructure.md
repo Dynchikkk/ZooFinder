@@ -180,7 +180,7 @@ The dependency's settings validator checks header syntax and configuration limit
 The timeout covers both headers and body; an earlier HttpClient timeout may also end a request.
 
 Basic en/ru search, continuation, details, missing pages, disambiguation, and cache reuse have been checked
-manually against Wikipedia. Runtime API composition and end-to-end flows remain pending.
+manually against Wikipedia. End-to-end flows remain pending.
 
 ### Recognition
 

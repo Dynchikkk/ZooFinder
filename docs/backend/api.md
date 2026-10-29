@@ -1,129 +1,83 @@
 # API Layer
 
-API owns HTTP transport and composition. Core setup, error handling, and Auth endpoints are implemented;
-other business endpoints remain pending.
-See [Backend](README.md) for current implementation status.
+API owns HTTP transport and composition. See [Backend](README.md) for implementation status
+and [Application](application.md) for scenario behavior.
 
-## Transport Rules
+## Organization
 
-### Controllers and Identity
+| Responsibility | Location |
+| --- | --- |
+| Controllers | `Controllers/<Module>/`; namespaces match folders |
+| DI registration | `DependencyInjection/<Owner>ServiceCollectionExtensions.cs` |
+| Claims helpers | Authentication/ |
+| Shared configuration readers and startup validation | Configuration/ |
+| HTTP error mapping and responses | ErrorHandling/ |
 
-- Group controllers in Controllers/<Module>/ with matching namespaces.
-- Do not create controller folders for unimplemented modules.
-- Adapt transport inputs and invoke Application scenarios.
-- Do not duplicate business rules in controllers.
-- Pass RequestAborted to operations.
-- Obtain actor account IDs from validated claims, not request-selected IDs.
-- Keep public park flows open in v1 while preserving publication/availability filters.
+- ApiServiceCollectionExtensions is the single composition entry point; module details stay in their registration classes.
+- Use one registration class per primary module: Auth, Users, Animals, Parks, Discussions.
+  Register child scenarios with their parent module, rather than per controller.
+- Auth owns security and bearer configuration; Animals owns Wiki and recognition providers.
+- Give shared persistence, caching, and error handling separate registration classes.
+- Register each dependency once. Only the composition entry point connects module registrations;
+  modules must not invoke each other's registration methods.
+- Bind and validate module settings in their owning registration. Startup validation is an ordinary method.
+- Keep other helpers with their responsibility; no root Extensions folder or generic
+  ServiceCollectionExtensions/ApplicationBuilderExtensions classes.
+- Create folders and registration files as functionality is introduced; no empty scaffolding.
 
-### Uploads and Imports
+## Transport
 
-- Adapt IFormFile to the stream contract.
-- Check actual size and file signature, not just declared metadata.
-- Application's declared recognition-image limit is 10 MiB.
-- Pass optional ParkId; recognition candidates are loaded server-side.
-- Do not trust a browser-supplied catalog.
-- Decode CSV into existing contracts before preview/apply.
-- Decoding does not independently save cards or park links.
-
-### Responses
-
-- Use Application responses or thin transport wrappers.
-- Return UTC dates and treat cursors as opaque.
-- Keep recognition outcomes and technical errors distinct.
-- Wiki URLs come from the information provider.
-- Deleted history retains metadata with null content.
-- Internal exceptions and raw provider payloads are not public output.
+- Controllers adapt HTTP input/output and call Application services without duplicating business rules.
+- Pass RequestAborted to operations; obtain actor IDs from validated claims.
+- Use Application responses or thin transport wrappers; return UTC dates and treat cursors as opaque.
+- Validate actual image size/signature, then adapt IFormFile to the Application stream contract.
+  Recognition limits belong to Application; park candidates are loaded server-side.
+- Decode CSV into Application contracts before preview/apply; saving belongs to the scenario.
 
 ## Errors
 
-| Scenario outcome | HTTP status |
+Use Problem Details for HTTP errors. Expected Application messages are public; internal exception details
+and raw provider responses must not reach clients. Custom error logging is deferred.
+
+| Outcome | HTTP status |
 | --- | --- |
 | Invalid request | 400 |
 | Missing/invalid authentication | 401 |
 | Insufficient permission | 403 |
 | Not found | 404 |
 | State conflict | 409 |
-| Information/recognition provider unavailable or timed out | 503 |
+| Wiki/recognition unavailable or timed out | 503 |
 | Unexpected failure | 500 |
 
-HTTP errors use Problem Details. Application validation messages are public; unexpected failures and provider
-unavailability expose no exception details. Responses include a traceId; custom error logging is deferred.
-Malformed HTTP requests preserve BadHttpRequestException's status with a generic message.
-Empty error responses use the standard Problem Details writer when the client's Accept header permits JSON.
-Controller model-binding/validation errors retain the standard ValidationProblemDetails errors collection.
-Aborted requests follow the host's cancellation handling; they are not mapped to provider unavailability.
-Endpoint URLs/methods outside Auth are not finalized.
+Malformed HTTP requests preserve their transport status with a generic message.
+Caller cancellation is not provider unavailability. Validation responses retain field errors;
+empty error responses use Problem Details when the client accepts JSON.
 
-## Composition and Authentication
+## Configuration
 
-### Composition
+appsettings.json contains shared defaults and deployment placeholders; appsettings.Development.json supplies local overrides.
+Supply secrets through runtime configuration. Settings changes require a restart.
+Startup validates configuration without connecting to SQL Server or external services.
+Database initialization follows the [migration policy](../development.md#database-migrations).
 
-- All IServiceCollection helpers belong to API.
-- Runtime setup registers SQL Server DbContext, TimeProvider, Auth security/settings, Wiki/Python clients, and a bounded cache.
-- Auth services and data sources are registered with scoped lifetimes.
-- Application services and data sources are registered with their API modules; discussions await the event publisher.
-- Configure Application settings here; implementations do not register themselves.
-- Event/Hub composition must preserve dependency direction: Infrastructure cannot import API.
-- Runtime schema initialization is not implemented.
+## Authentication
 
-Registration structure is mandatory:
+Bearer validation uses the same [JWT settings](infrastructure.md#jwt-settings) as issuance:
+HS256, signature, issuer, audience, and lifetime, with no clock skew allowance or inbound claim mapping.
+The sub claim must be a non-empty account GUID; sub/role are the name/role claim types.
 
-- Place all IServiceCollection registration helpers in DependencyInjection, named <Owner>ServiceCollectionExtensions.
-- ApiServiceCollectionExtensions is the single composition entry point. It wires modules and common framework services;
-  module-specific settings, implementations, and configuration callbacks stay in the owning registration class.
-- Use one registration class per primary module: Auth, Users, Animals, Parks, and Discussions.
-  Group child scenarios with their parent module rather than creating registrations per controller.
-- Auth owns security implementations and bearer configuration; Animals owns Wiki and recognition providers;
-  Parks owns park animals, imports, and connections; Discussions owns rooms, messages, and SignalR.
-- Give shared technical concerns, such as persistence, caching, and error handling, separate registration classes.
-- Register each dependency once. The composition entry point connects modules and shared registrations;
-  module registration methods must not invoke other modules' registration methods.
-- Keep reusable configuration readers and startup validation in Configuration; startup validation is an ordinary method.
-  Bind and validate module options in the owning registration class.
-- Place other extension methods with their responsibility, such as claims helpers in Authentication.
-  Do not introduce a root Extensions folder or generic ServiceCollectionExtensions/ApplicationBuilderExtensions classes.
-- Create registration files only when their functionality is introduced; do not add empty module scaffolding.
+Bearer validation does not query the database. Account status and role changes are not checked on every request;
+Application scenarios retain their own checks. Revoking refresh sessions does not invalidate issued access tokens.
 
-Configuration sections are Auth, Jwt, Wiki, Recognition, and MemoryCache; SQL uses ConnectionStrings:ZooFinder.
-appsettings.json contains common defaults and placeholders for deployment-specific values; appsettings.Development.json supplies local values.
-The standard host loads the base file first, then environment-specific overrides; other environments must supply valid values.
-Supply Jwt:SigningKeyBase64 and an identifying Wiki:UserAgent through runtime configuration; no credentials are committed.
-Environment-variable keys use `__`, for example `Jwt__SigningKeyBase64` and `Wiki__UserAgent`.
-Startup validates configuration and constructs core dependencies without connecting to SQL Server or external services.
-Settings are bound at startup; changing them requires restarting the host.
+All Auth routes use POST under /api/auth and JSON contracts. Token responses disable caching.
 
-### Bearer Validation
+| Route | Access | Success |
+| --- | --- | --- |
+| register | Anonymous | 200, AuthResponse |
+| login | Anonymous | 200, AuthResponse |
+| refresh | Refresh-token possession | 200, AuthResponse |
+| logout | Refresh-token possession | 204 |
+| logout-all | Bearer; account ID from sub | 204 |
 
-Validation uses the same [JWT settings](infrastructure.md#auth-security) as token issuance.
-
-- Require HS256.
-- Validate signature, issuer, audience, and lifetime.
-- Disable inbound claim mapping.
-- Use sub/role as name/role claim types.
-- Require sub to contain a non-empty account GUID; validate lifetime with no additional clock skew allowance.
-- Load signing keys from secure runtime configuration.
-
-Bearer validation does not query the database. Access tokens are not persisted and remain valid until expiration
-after refresh-session revocation; account status and role changes are not checked on every HTTP request.
-Application scenarios retain their own account checks.
-
-### Auth HTTP
-
-All routes use POST under /api/auth and reuse Application request/response contracts.
-Successful token responses use HTTP 200 and disable response caching.
-
-| Route | Input | Access | Success |
-| --- | --- | --- | --- |
-| register | Login and password | Anonymous | AuthResponse |
-| login | Login and password | Anonymous | AuthResponse |
-| refresh | RefreshToken | Refresh-token possession | AuthResponse with rotated tokens |
-| logout | RefreshToken | Refresh-token possession | 204 |
-| logout-all | No body | Valid bearer token; account ID from sub | 204 |
-
-Refresh and logout do not require an unexpired access token. Tokens are exchanged in JSON; cookie transport is not implemented.
-Invalid credentials or refresh tokens return 401; a duplicate login returns 409.
-HTTP 401 responses include WWW-Authenticate: Bearer without internal validation details.
-Session behavior remains owned by [Application](application.md#authentication-and-profiles).
-
-Other business controllers/module registration, uploads, CSV, and event transport remain pending.
+Refresh/logout do not require an unexpired access token. HTTP 401 responses include WWW-Authenticate: Bearer.
+Session rules belong to [Application](application.md#authentication-and-profiles).
