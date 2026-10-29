@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using ZooFinder.Api.Configuration;
+using ZooFinder.Api.ErrorHandling;
 using ZooFinder.Application.Common.Animals.Dependencies.AnimalInformation;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 using ZooFinder.Application.Modules.Auth.Dependencies.AccessToken;
@@ -26,6 +27,20 @@ internal static class ServiceCollectionExtensions
     private const string WikiSection = "Wiki";
     private const string RecognitionSection = "Recognition";
     private const string MemoryCacheSection = "MemoryCache";
+
+    public static IServiceCollection AddZooFinderErrorHandling(this IServiceCollection services)
+    {
+        services.AddProblemDetails(options =>
+        {
+            options.CustomizeProblemDetails = context =>
+            {
+                context.ProblemDetails.Instance ??= context.HttpContext.Request.Path;
+                context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+            };
+        });
+        services.AddExceptionHandler<ApiExceptionHandler>();
+        return services;
+    }
 
     public static IServiceCollection AddZooFinderDependencies(this IServiceCollection services, IConfiguration configuration)
     {

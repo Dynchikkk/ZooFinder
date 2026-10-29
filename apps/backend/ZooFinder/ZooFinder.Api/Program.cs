@@ -10,10 +10,14 @@ builder.Host.UseDefaultServiceProvider(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddZooFinderErrorHandling();
 builder.Services.AddZooFinderDependencies(builder.Configuration);
 
 var app = builder.Build();
 app.ValidateZooFinderConfiguration();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {

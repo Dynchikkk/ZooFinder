@@ -34,16 +34,22 @@ See [Backend](README.md) for current implementation status.
 
 ## Errors
 
-| Scenario outcome | Planned HTTP status |
+| Scenario outcome | HTTP status |
 | --- | --- |
 | Invalid request | 400 |
 | Missing/invalid authentication | 401 |
 | Insufficient permission | 403 |
 | Not found | 404 |
 | State conflict | 409 |
+| Information/recognition provider unavailable or timed out | 503 |
 | Unexpected failure | 500 |
 
-Problem Details and provider timeout/unavailability mapping remain to be implemented.
+HTTP errors use Problem Details. Application validation messages are public; unexpected failures and provider
+unavailability expose no exception details. Responses include a traceId; custom error logging is deferred.
+Malformed HTTP requests preserve BadHttpRequestException's status with a generic message.
+Empty error responses use the standard Problem Details writer when the client's Accept header permits JSON.
+Controller model-binding/validation errors retain the standard ValidationProblemDetails errors collection.
+Aborted requests follow the host's cancellation handling; they are not mapped to provider unavailability.
 Endpoint URLs/methods are not finalized.
 
 ## Composition and Authentication
@@ -78,4 +84,4 @@ Use matching [JWT settings](infrastructure.md#auth-security).
 Refresh endpoints follow existing session rules.
 Access tokens are not persisted.
 
-Business controllers/module registration, bearer authentication, errors, uploads, CSV, and event transport remain pending.
+Business controllers/module registration, bearer authentication, uploads, CSV, and event transport remain pending.
