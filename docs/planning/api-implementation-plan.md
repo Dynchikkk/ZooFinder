@@ -1,6 +1,6 @@
 # API Implementation Plan
 
-Current position: steps 1–3 are implemented; step 4 is next.
+Current position: steps 1–4 are implemented; step 5 is next.
 Implementation status does not imply live SQL Server or end-to-end verification.
 
 Follow the [development rules](../development.md) and [API rules](../backend/api.md).
@@ -20,10 +20,10 @@ The broader [product roadmap](parks-and-recognition-roadmap.md) covers Python, f
    Register Auth services/data sources and add registration, login, refresh, session revocation, and revocation of all sessions.
    Configure JWT validation and obtain the current account ID from validated claims.
 
-4. [ ] **User profile — next.**
+4. [x] **User profile.**
    Expose the existing profile read/update scenarios for the current account.
 
-5. [ ] **Animal catalog.**
+5. [ ] **Animal catalog — next.**
    Expose external/local search and animal details using the existing catalog service and pagination contracts.
 
 6. [ ] **Parks and park animals.**

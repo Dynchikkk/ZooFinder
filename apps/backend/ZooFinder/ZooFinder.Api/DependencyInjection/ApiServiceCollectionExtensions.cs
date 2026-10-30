@@ -18,6 +18,7 @@ internal static class ApiServiceCollectionExtensions
         
         // Modules
         services.AddAuthModule(configuration);
+        services.AddUsersModule();
         services.AddAnimalsModule(configuration);
 
         return services;

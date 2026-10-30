@@ -23,18 +23,14 @@ internal static class ApiExceptionMapper
     private static readonly IReadOnlyDictionary<Type, Func<Exception, ApiErrorResponse>> ExceptionResponses =
         new Dictionary<Type, Func<Exception, ApiErrorResponse>>
         {
-            [typeof(RequestValidationException)] = exception =>
-                CreateResponse(StatusCodes.Status400BadRequest, exception.Message),
+            [typeof(RequestValidationException)] = exception => CreateResponse(StatusCodes.Status400BadRequest, exception.Message),
             [typeof(UnauthorizedException)] = exception => CreateResponse(StatusCodes.Status401Unauthorized, exception.Message),
             [typeof(ForbiddenException)] = exception => CreateResponse(StatusCodes.Status403Forbidden, exception.Message),
             [typeof(NotFoundException)] = exception => CreateResponse(StatusCodes.Status404NotFound, exception.Message),
             [typeof(ConflictException)] = exception => CreateResponse(StatusCodes.Status409Conflict, exception.Message),
-            [typeof(AnimalInformationUnavailableException)] = _ =>
-                CreateResponse(StatusCodes.Status503ServiceUnavailable, ServiceUnavailableDetail),
-            [typeof(AnimalRecognitionUnavailableException)] = _ =>
-                CreateResponse(StatusCodes.Status503ServiceUnavailable, ServiceUnavailableDetail),
-            [typeof(BadHttpRequestException)] = exception =>
-                CreateResponse(((BadHttpRequestException)exception).StatusCode, BadRequestDetail)
+            [typeof(AnimalInformationUnavailableException)] = _ => CreateResponse(StatusCodes.Status503ServiceUnavailable, ServiceUnavailableDetail),
+            [typeof(AnimalRecognitionUnavailableException)] = _ => CreateResponse(StatusCodes.Status503ServiceUnavailable, ServiceUnavailableDetail),
+            [typeof(BadHttpRequestException)] = exception => CreateResponse(((BadHttpRequestException)exception).StatusCode, BadRequestDetail)
         };
 
     public static ApiErrorResponse Map(Exception exception)

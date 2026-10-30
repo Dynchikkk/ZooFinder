@@ -6,7 +6,7 @@ using ZooFinder.Application.Modules.Auth.Modules.Authentication.Services.Auth;
 namespace ZooFinder.Api.Controllers.Auth;
 
 [ApiController]
-[Route("api/auth")]
+[Route("api/[controller]")]
 [Authorize]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class AuthController : ControllerBase

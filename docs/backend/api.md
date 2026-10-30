@@ -28,6 +28,7 @@ and [Application](application.md) for scenario behavior.
 ## Transport
 
 - Controllers adapt HTTP input/output and call Application services without duplicating business rules.
+- Use `api/[controller]` for controller prefixes and explicit operation paths where needed.
 - Pass RequestAborted to operations; obtain actor IDs from validated claims.
 - Use Application responses or thin transport wrappers; return UTC dates and treat cursors as opaque.
 - Validate actual image size/signature, then adapt IFormFile to the Application stream contract.
@@ -69,7 +70,7 @@ The sub claim must be a non-empty account GUID; sub/role are the name/role claim
 Bearer validation does not query the database. Account status and role changes are not checked on every request;
 Application scenarios retain their own checks. Revoking refresh sessions does not invalidate issued access tokens.
 
-All Auth routes use POST under /api/auth and JSON contracts. Token responses disable caching.
+All Auth routes use POST under /api/Auth and JSON contracts. Token responses disable caching.
 
 | Route | Access | Success |
 | --- | --- | --- |
@@ -81,3 +82,8 @@ All Auth routes use POST under /api/auth and JSON contracts. Token responses dis
 
 Refresh/logout do not require an unexpired access token. HTTP 401 responses include WWW-Authenticate: Bearer.
 Session rules belong to [Application](application.md#authentication-and-profiles).
+
+## User Profile
+
+GET/PUT /api/UserProfile require bearer authentication and use the account ID from sub.
+PUT accepts DisplayName; both return UserProfileResponse with HTTP 200 and disable response caching.
