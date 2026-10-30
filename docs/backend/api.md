@@ -29,6 +29,7 @@ and [Application](application.md) for scenario behavior.
 
 - Controllers adapt HTTP input/output and call Application services without duplicating business rules.
 - Use `api/[controller]` for controller prefixes and explicit operation paths where needed.
+- Mark JSON request objects with [FromBody] and query request objects with [FromQuery].
 - Pass RequestAborted to operations; obtain actor IDs from validated claims.
 - Use Application responses or thin transport wrappers; return UTC dates and treat cursors as opaque.
 - Validate actual image size/signature, then adapt IFormFile to the Application stream contract.
@@ -87,3 +88,8 @@ Session rules belong to [Application](application.md#authentication-and-profiles
 
 GET/PUT /api/UserProfile require bearer authentication and use the account ID from sub.
 PUT accepts DisplayName; both return UserProfileResponse with HTTP 200 and disable response caching.
+
+## Animal Catalog
+
+GET /api/AnimalCatalog accepts AnimalSearchRequest from query parameters; GET /api/AnimalCatalog/details accepts AnimalPageRequest.
+Both are public reads; [Application](application.md#catalog) owns search, pagination, and provider behavior.

@@ -28,7 +28,7 @@ public sealed class UserProfileController : ControllerBase
 
     [HttpPut]
     public async Task<ActionResult<UserProfileResponse>> Update(
-        UpdateUserProfileRequest request,
+        [FromBody] UpdateUserProfileRequest request,
         CancellationToken cancellationToken)
     {
         Guid userAccountId = User.GetUserAccountId();

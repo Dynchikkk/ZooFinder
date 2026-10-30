@@ -20,7 +20,9 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("register")]
-    public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthResponse>> Register(
+        [FromBody] RegisterRequest request,
+        CancellationToken cancellationToken)
     {
         AuthResponse response = await _authService.RegisterAsync(request, cancellationToken);
         return Ok(response);
@@ -28,7 +30,7 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<ActionResult<AuthResponse>> Login(LoginRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
         AuthResponse response = await _authService.LoginAsync(request, cancellationToken);
         return Ok(response);
@@ -36,7 +38,9 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("refresh")]
-    public async Task<ActionResult<AuthResponse>> Refresh(RefreshSessionRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthResponse>> Refresh(
+        [FromBody] RefreshSessionRequest request,
+        CancellationToken cancellationToken)
     {
         AuthResponse response = await _authService.RefreshSessionAsync(request, cancellationToken);
         return Ok(response);
@@ -44,7 +48,7 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout(RevokeSessionRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout([FromBody] RevokeSessionRequest request, CancellationToken cancellationToken)
     {
         await _authService.RevokeSessionAsync(request, cancellationToken);
         return NoContent();

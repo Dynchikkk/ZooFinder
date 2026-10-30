@@ -12,7 +12,7 @@ Layer responsibilities and dependency rules are in [Architecture](../architectur
 | Persistence | EF Core/SQL Server context, mappings, nine data sources, runtime DB configuration | Agreed schema, Initial migration, live verification |
 | Auth security | Password hashing, refresh-token generation/hashing, JWT issuance/validation, Auth HTTP endpoints | Live session verification |
 | Integrations | Wiki/Python HTTP adapters and client configuration; event interface | Python service/model; event transport |
-| API | Core DI, configuration, startup validation, Problem Details, Auth/profile controllers | Remaining controllers/module registration, uploads, CSV |
+| API | Core DI, configuration, startup validation, Problem Details, Auth/profile/catalog controllers | Remaining controllers/module registration, uploads, CSV |
 
 There is no complete runnable business flow. Basic Wikipedia calls have been checked manually;
 live SQL Server concurrency and end-to-end integration are not verified. Frontend and deployment remain pending.
