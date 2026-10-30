@@ -1,8 +1,11 @@
 using ZooFinder.Api.Configuration;
+using ZooFinder.Application.Common.Animals.DataSources;
 using ZooFinder.Application.Common.Animals.Dependencies.AnimalInformation;
+using ZooFinder.Application.Common.Animals.Services.AnimalRegistration;
 using ZooFinder.Application.Modules.Animals.Modules.Catalog.DataSources;
 using ZooFinder.Application.Modules.Animals.Modules.Catalog.Services.AnimalCatalog;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
+using ZooFinder.Infrastructure.Modules.Animals.DataSources;
 using ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation;
 using ZooFinder.Infrastructure.Modules.Animals.Modules.Catalog.DataSources;
 using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
@@ -28,9 +31,11 @@ internal static class AnimalsServiceCollectionExtensions
             .ConfigurePrimaryHttpMessageHandler(CreateHttpHandler);
         
         // Data sources
+        services.AddScoped<IAnimalRegistrationDataSource, AnimalRegistrationDataSource>();
         services.AddScoped<IAnimalCatalogDataSource, AnimalCatalogDataSource>();
 
         // Services
+        services.AddScoped<IAnimalRegistrationService, AnimalRegistrationService>();
         services.AddScoped<IAnimalCatalogService, AnimalCatalogService>();
 
         return services;

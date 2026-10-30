@@ -93,3 +93,9 @@ PUT accepts DisplayName; both return UserProfileResponse with HTTP 200 and disab
 
 GET /api/AnimalCatalog accepts AnimalSearchRequest from query parameters; GET /api/AnimalCatalog/details accepts AnimalPageRequest.
 Both are public reads; [Application](application.md#catalog) owns search, pagination, and provider behavior.
+
+## Parks
+
+/api/Parks exposes search, details, creation, editing, and status changes; /api/ParkAnimals exposes membership operations.
+All park operations are public in v1. IDs for individual reads, updates, and removal come from route parameters.
+Creation returns 201; membership addition/restoration returns 200; removal returns 204.
