@@ -95,6 +95,15 @@ PUT accepts DisplayName; both return UserProfileResponse with HTTP 200 and disab
 GET /api/AnimalCatalog accepts AnimalSearchRequest from query parameters; GET /api/AnimalCatalog/details accepts AnimalPageRequest.
 Both are public reads; [Application](application.md#catalog) owns search, pagination, and provider behavior.
 
+## Animal Recognition
+
+POST /api/AnimalRecognition is public and accepts multipart fields: image, languageCode (default en), and optional parkId.
+It returns AnimalRecognitionResponse with HTTP 200. API checks IFormFile.Length against Application's 10 MiB limit and detects
+JPEG/PNG/WebP from signatures, ignoring the supplied MIME type and extension. Empty files return 400,
+oversized files 413, and unsupported signatures 415. Signature checks do not replace full image decoding in Python.
+Application loads park candidates server-side; API disposes the image stream after the scenario completes.
+Images are not persisted or cached by the recognition flow. Live inference requires the pending Python service.
+
 ## Parks
 
 /api/Parks exposes search, details, creation, editing, and status changes; /api/ParkAnimals exposes membership operations.

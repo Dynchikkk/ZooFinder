@@ -4,11 +4,14 @@ using ZooFinder.Application.Common.Animals.Dependencies.AnimalInformation;
 using ZooFinder.Application.Common.Animals.Services.AnimalRegistration;
 using ZooFinder.Application.Modules.Animals.Modules.Catalog.DataSources;
 using ZooFinder.Application.Modules.Animals.Modules.Catalog.Services.AnimalCatalog;
+using ZooFinder.Application.Modules.Animals.Modules.Recognition.DataSources;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
+using ZooFinder.Application.Modules.Animals.Modules.Recognition.Services.AnimalRecognition;
 using ZooFinder.Infrastructure.Modules.Animals.DataSources;
 using ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation;
 using ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation.Settings;
 using ZooFinder.Infrastructure.Modules.Animals.Modules.Catalog.DataSources;
+using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.DataSources;
 using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition.Settings;
 
@@ -35,10 +38,12 @@ internal static class AnimalsServiceCollectionExtensions
         // Data sources
         services.AddScoped<IAnimalRegistrationDataSource, AnimalRegistrationDataSource>();
         services.AddScoped<IAnimalCatalogDataSource, AnimalCatalogDataSource>();
+        services.AddScoped<IAnimalRecognitionDataSource, AnimalRecognitionDataSource>();
 
         // Services
         services.AddScoped<IAnimalRegistrationService, AnimalRegistrationService>();
         services.AddScoped<IAnimalCatalogService, AnimalCatalogService>();
+        services.AddScoped<IAnimalRecognitionService, AnimalRecognitionService>();
 
         return services;
     }
