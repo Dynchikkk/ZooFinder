@@ -13,6 +13,7 @@ and [Application](application.md) for scenario behavior.
 | Shared configuration readers and startup validation | Configuration/ |
 | API-owned settings | `Configuration/<Module>/Settings/` |
 | HTTP error mapping and responses | ErrorHandling/ |
+| SignalR hubs and event transport | `Realtime/<Module>/` |
 
 - ApiServiceCollectionExtensions is the single composition entry point; module details stay in their registration classes.
 - Use one registration class per primary module: Auth, Users, Animals, Parks, Discussions.
@@ -126,3 +127,18 @@ The [Application import rules](application.md#imports) define the row limit, mat
 /api/ParkConnections exposes search by parkId with offset pagination, individual reads, and creation.
 POST actions /{requestId}/approve, /{requestId}/confirm-payment, and /{requestId}/close manage the request workflow.
 Creation returns 201; other operations return 200. All are public in v1; payment confirmation is manual.
+
+## Discussions
+
+/api/DiscussionRooms exposes reads by room ID, GET /general?animalId=..., and POST creation/reuse of a General room.
+/api/DiscussionMessages exposes GET history (discussionRoomId, cursor, limit), POST sending, PUT /{messageId}, and DELETE /{messageId}.
+Reads are public; writes require bearer authentication and take the actor ID from sub. Success is 200, except deletion (204).
+
+The public /hubs/discussions hub only exposes JoinRoom(roomId) and LeaveRoom(roomId) for the current connection.
+Joining checks room visibility through Application; closed rooms remain readable. Leaving validates the ID and permits cleanup
+even if the room has disappeared. Expected join errors use HubException; unexpected error details remain hidden.
+MessageCreated/MessageUpdated carry DiscussionMessageEvent; MessageDeleted carries discussionRoomId, discussionMessageId, deletedAtUtc.
+Events target the room's connections, including the sender if subscribed. Clients merge HTTP responses/events by message ID.
+After connecting or reconnecting, join before reloading history and merge events received during the reload.
+One backend process is supported; groups and events have no durable replay. Persistence precedes publication;
+publication failure may follow a committed write. Reload history to reconcile before retrying a write.

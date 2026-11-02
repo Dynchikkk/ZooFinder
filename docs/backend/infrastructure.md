@@ -18,7 +18,7 @@ See [Backend](README.md) for pending integrations.
 - Application service contracts remain in Application; avoid empty integration scaffolding.
 - Context, factory, mappings, and database cursors belong to Persistence.
 - DI helpers belong to API. Infrastructure must not reference API.
-- Resolve Hub/event transport placement during implementation.
+- SignalR hubs and discussion event transport belong to [API](api.md#discussions).
 - Do not introduce a generic repository or UnitOfWork.
 
 ## Persistence Rules

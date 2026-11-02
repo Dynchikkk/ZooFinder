@@ -19,6 +19,19 @@ public sealed class DiscussionRoomService : IDiscussionRoomService
         _registration = registration;
     }
 
+    public async Task<DiscussionRoomResponse> GetRoomAsync(Guid roomId, CancellationToken cancellationToken)
+    {
+        DiscussionRoomValidator.ValidateRoomId(roomId);
+        var room = await _discussionDataSource.GetRoomByIdAsync(roomId, cancellationToken);
+
+        if (room == null || room.IsDeleted)
+        {
+            throw new NotFoundException("Discussion room was not found.");
+        }
+
+        return new DiscussionRoomResponse(room.Id, room.AnimalId, room.Type, room.Name, room.Description, room.IsClosed);
+    }
+
     public async Task<DiscussionRoomResponse?> GetGeneralRoomAsync(Guid animalId, CancellationToken cancellationToken)
     {
         DiscussionRoomValidator.ValidateAnimalId(animalId);

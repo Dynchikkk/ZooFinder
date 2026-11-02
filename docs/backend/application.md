@@ -181,6 +181,7 @@ AuthSettings controls session lifetime; TimeProvider supplies UTC.
 
 ## Discussions
 
+- Room/history reads are public; a missing/deleted room cannot be subscribed to. Closed rooms remain readable.
 - Explicit room creation requires an active account; automatic park registration does not.
 - Messages require an active account, open room, and 1–4,000 normalized characters.
 - Authors, moderators, and administrators may edit/delete messages.

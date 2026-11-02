@@ -2,6 +2,10 @@ namespace ZooFinder.Application.Modules.Discussions.Modules.Rooms.Services.Discu
 
 public interface IDiscussionRoomService
 {
+    Task<DiscussionRoomResponse> GetRoomAsync(
+        Guid roomId,
+        CancellationToken cancellationToken);
+
     Task<DiscussionRoomResponse?> GetGeneralRoomAsync(
         Guid animalId,
         CancellationToken cancellationToken);

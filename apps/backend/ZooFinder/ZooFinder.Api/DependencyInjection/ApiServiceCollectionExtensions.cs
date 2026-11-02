@@ -21,6 +21,7 @@ internal static class ApiServiceCollectionExtensions
         services.AddUsersModule();
         services.AddAnimalsModule(configuration);
         services.AddParksModule(configuration);
+        services.AddDiscussionsModule();
 
         return services;
     }

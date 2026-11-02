@@ -1,5 +1,6 @@
 using ZooFinder.Api.Configuration;
 using ZooFinder.Api.DependencyInjection;
+using ZooFinder.Api.Realtime.Discussions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,4 +27,5 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<DiscussionHub>(DiscussionHub.Route);
 app.Run();

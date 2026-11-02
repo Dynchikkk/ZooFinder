@@ -1,6 +1,6 @@
 # API Implementation Plan
 
-Current position: steps 1–9 are implemented; step 10 is next.
+Current position: steps 1–10 are implemented; step 11 is next.
 Implementation status does not imply live SQL Server or end-to-end verification.
 
 Follow the [development rules](../development.md) and [API rules](../backend/api.md).
@@ -41,13 +41,13 @@ The broader [product roadmap](parks-and-recognition-roadmap.md) covers Python, f
    Keep the .NET adapter aligned with the [Python protocol](../backend/recognition-protocol.md).
    Live inference verification requires the Python service, which is still pending.
 
-10. [ ] **Discussions and messages — next.**
+10. [x] **Discussions and messages.**
     Expose room operations and message history/writes over HTTP.
     Add an API-owned SignalR Hub and IDiscussionEventPublisher implementation, with room join/leave checks.
     Start with one backend process; reconnecting clients rejoin and reload history.
     Persistence precedes publication; v1 has no outbox or guaranteed event replay.
 
-11. [ ] **Final verification and database initialization.**
+11. [ ] **Final verification and database initialization — next.**
     After schema agreement, create one Initial migration and apply it to a development database.
     Verify authentication, permissions, CRUD, pagination, imports, uploads, integrations, and SignalR with live dependencies.
     Add automated tests at the final development stage according to the development rules.
