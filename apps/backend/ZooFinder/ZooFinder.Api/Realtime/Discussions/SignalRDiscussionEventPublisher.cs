@@ -28,14 +28,9 @@ public sealed class SignalRDiscussionEventPublisher : IDiscussionEventPublisher
             .SendAsync(MessageUpdatedEvent, message, cancellationToken);
     }
 
-    public Task PublishMessageDeletedAsync(
-        Guid discussionRoomId,
-        Guid discussionMessageId,
-        DateTime deletedAtUtc,
-        CancellationToken cancellationToken)
+    public Task PublishMessageDeletedAsync(DiscussionMessageEvent message, CancellationToken cancellationToken)
     {
-        var message = new DiscussionMessageDeletedEvent(discussionRoomId, discussionMessageId, deletedAtUtc);
-        return _hubContext.Clients.Group(DiscussionHub.GetRoomGroupName(discussionRoomId))
+        return _hubContext.Clients.Group(DiscussionHub.GetRoomGroupName(message.DiscussionRoomId))
             .SendAsync(MessageDeletedEvent, message, cancellationToken);
     }
 }

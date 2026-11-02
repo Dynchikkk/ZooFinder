@@ -137,7 +137,7 @@ Reads are public; writes require bearer authentication and take the actor ID fro
 The public /hubs/discussions hub only exposes JoinRoom(roomId) and LeaveRoom(roomId) for the current connection.
 Joining checks room visibility through Application; closed rooms remain readable. Leaving validates the ID and permits cleanup
 even if the room has disappeared. Expected join errors use HubException; unexpected error details remain hidden.
-MessageCreated/MessageUpdated carry DiscussionMessageEvent; MessageDeleted carries discussionRoomId, discussionMessageId, deletedAtUtc.
+MessageCreated, MessageUpdated, and MessageDeleted carry DiscussionMessageEvent; deleted messages have null content.
 Events target the room's connections, including the sender if subscribed. Clients merge HTTP responses/events by message ID.
 After connecting or reconnecting, join before reloading history and merge events received during the reload.
 One backend process is supported; groups and events have no durable replay. Persistence precedes publication;

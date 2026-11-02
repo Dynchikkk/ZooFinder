@@ -48,11 +48,9 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         }
 
         var pageRequest = new CursorPageRequest(request.Cursor.NormalizeCursor(), request.Limit);
-
         var page = await _discussionDataSource.GetMessagesWithAuthorProfilesAsync(room.Id, pageRequest, cancellationToken);
 
         var messages = new List<DiscussionMessageResponse>(page.Items.Count);
-
         foreach (DiscussionMessage message in page.Items)
         {
             UserProfile authorProfile = message.AuthorUserAccount?.UserProfile
@@ -136,6 +134,7 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         message.UpdatedAtUtc = currentTime;
 
         await _discussionDataSource.UpdateMessageAsync(message, cancellationToken);
+        await _discussionEventPublisher.PublishMessageUpdatedAsync(ToEvent(message), cancellationToken);
 
         var response = new DiscussionMessageResponse(
             message.Id,
@@ -148,8 +147,6 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
             message.CreatedAtUtc,
             message.EditedAtUtc,
             null);
-
-        await _discussionEventPublisher.PublishMessageUpdatedAsync(ToEvent(response), cancellationToken);
 
         return response;
     }
@@ -187,12 +184,7 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         message.UpdatedAtUtc = currentTime;
 
         await _discussionDataSource.UpdateMessageAsync(message, cancellationToken);
-
-        await _discussionEventPublisher.PublishMessageDeletedAsync(
-            message.DiscussionRoomId,
-            message.Id,
-            currentTime,
-            cancellationToken);
+        await _discussionEventPublisher.PublishMessageDeletedAsync(ToEvent(message), cancellationToken);
     }
 
     private async Task<DiscussionMessageResponse> AddMessageAsync(
@@ -216,6 +208,7 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
         };
 
         await _discussionDataSource.AddMessageAsync(message, cancellationToken);
+        await _discussionEventPublisher.PublishMessageCreatedAsync(ToEvent(message), cancellationToken);
 
         var response = new DiscussionMessageResponse(
             message.Id,
@@ -229,8 +222,6 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
             null,
             null);
 
-        await _discussionEventPublisher.PublishMessageCreatedAsync(ToEvent(response), cancellationToken);
-
         return response;
     }
 
@@ -240,21 +231,26 @@ public sealed class DiscussionMessageService : IDiscussionMessageService
             ?? throw new UnauthorizedException("User account was not found.");
 
         DiscussionUserValidator.ValidateUserCanWrite(userAccount);
-
-        _ = userAccount.UserProfile ?? throw new InvalidOperationException("User account was loaded without its profile.");
+        if (userAccount.UserProfile == null)
+        {
+            throw new InvalidOperationException("User account was loaded without its profile.");
+        }
 
         return userAccount;
     }
 
-    private static DiscussionMessageEvent ToEvent(DiscussionMessageResponse message)
+    private static DiscussionMessageEvent ToEvent(DiscussionMessage message)
     {
+        UserProfile authorProfile = message.AuthorUserAccount?.UserProfile
+            ?? throw new InvalidOperationException("Discussion message was loaded without its author profile.");
+
         return new DiscussionMessageEvent(
             message.Id,
             message.DiscussionRoomId,
             message.AuthorUserAccountId,
-            message.AuthorDisplayName,
-            message.Content,
-            message.IsEdited,
+            authorProfile.DisplayName,
+            message.IsDeleted ? null : message.Content,
+            message.EditedAtUtc != null,
             message.IsDeleted,
             message.CreatedAtUtc,
             message.EditedAtUtc,

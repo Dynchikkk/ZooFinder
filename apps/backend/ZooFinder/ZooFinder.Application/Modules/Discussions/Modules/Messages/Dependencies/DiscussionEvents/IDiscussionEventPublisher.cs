@@ -11,8 +11,6 @@ public interface IDiscussionEventPublisher
         CancellationToken cancellationToken);
 
     Task PublishMessageDeletedAsync(
-        Guid discussionRoomId,
-        Guid discussionMessageId,
-        DateTime deletedAtUtc,
+        DiscussionMessageEvent message,
         CancellationToken cancellationToken);
 }
