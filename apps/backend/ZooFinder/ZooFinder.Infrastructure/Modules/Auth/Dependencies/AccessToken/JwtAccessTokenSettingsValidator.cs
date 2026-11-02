@@ -1,3 +1,5 @@
+using ZooFinder.Infrastructure.Modules.Auth.Dependencies.AccessToken.Settings;
+
 namespace ZooFinder.Infrastructure.Modules.Auth.Dependencies.AccessToken;
 
 internal static class JwtAccessTokenSettingsValidator

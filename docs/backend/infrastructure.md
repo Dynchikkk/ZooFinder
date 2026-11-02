@@ -14,6 +14,7 @@ See [Backend](README.md) for pending integrations.
 - Merge matching folders without overwriting files or changing Application contract ownership.
 - Keep DataSources flat.
 - Dependencies use Dependencies/<Name>/ with their technical settings and transport DTOs.
+- Place settings classes in the owning dependency's Settings/ folder.
 - Application service contracts remain in Application; avoid empty integration scaffolding.
 - Context, factory, mappings, and database cursors belong to Persistence.
 - DI helpers belong to API. Infrastructure must not reference API.
@@ -142,7 +143,7 @@ Invalid or mismatched cursors produce a validation error.
 
 ### JWT Settings
 
-Settings belong to Dependencies/AccessToken.
+Settings belong to Dependencies/AccessToken/Settings.
 
 | Setting | Requirement |
 | --- | --- |

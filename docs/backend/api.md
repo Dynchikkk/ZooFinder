@@ -11,6 +11,7 @@ and [Application](application.md) for scenario behavior.
 | DI registration | `DependencyInjection/<Owner>ServiceCollectionExtensions.cs` |
 | Claims helpers | Authentication/ |
 | Shared configuration readers and startup validation | Configuration/ |
+| API-owned settings | `Configuration/<Module>/Settings/` |
 | HTTP error mapping and responses | ErrorHandling/ |
 
 - ApiServiceCollectionExtensions is the single composition entry point; module details stay in their registration classes.
@@ -99,3 +100,14 @@ Both are public reads; [Application](application.md#catalog) owns search, pagina
 /api/Parks exposes search, details, creation, editing, and status changes; /api/ParkAnimals exposes membership operations.
 All park operations are public in v1. IDs for individual reads, updates, and removal come from route parameters.
 Creation returns 201; membership addition/restoration returns 200; removal returns 204.
+
+### CSV Import
+
+POST /api/ParkImport/{parkId}/preview accepts a multipart `file`; POST /api/ParkImport/{parkId}/apply accepts selected rows as JSON.
+Both are public and return 200. Preview does not save data; apply uses the existing Application scenario.
+
+CSV uses UTF-8 (with or without BOM), `;`, and these case-sensitive headers in any order:
+`commonName;scientificName;informationSource;sourceItemId;languageCode;localDescription`.
+Quoted fields support separators, escaped quotes, and line breaks. Blank lines are ignored; an empty language defaults to en.
+Malformed CSV returns 400; an oversized file returns 413. ParkImport:MaximumFileBytes defaults to 1 MiB.
+The [Application import rules](application.md#imports) define the row limit, matching, and write guarantees.

@@ -5,6 +5,7 @@ using System.Text.Json;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Exceptions;
 using ZooFinder.Application.Shared.ErrorHandling.Exceptions;
+using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition.Settings;
 
 namespace ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 

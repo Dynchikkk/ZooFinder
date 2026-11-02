@@ -1,3 +1,4 @@
+using ZooFinder.Application.Modules.Parks.Modules.Import.Services.ParkAnimalImport;
 using ZooFinder.Domain.Parks;
 
 namespace ZooFinder.Api.Controllers.Parks;
@@ -13,3 +14,5 @@ public sealed record SetParkStatusRequest(ParkStatus Status);
 public sealed record UpdateParkAnimalHttpRequest(
     string? LocalDescription,
     bool IsPublished);
+
+public sealed record ApplyParkAnimalImportHttpRequest(IReadOnlyList<ParkAnimalImportSelection> Rows);

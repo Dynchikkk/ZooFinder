@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using ZooFinder.Application.Common.Animals.Dependencies.AnimalInformation;
 using ZooFinder.Application.Shared.Language.Validators;
 using ZooFinder.Application.Shared.Pagination.Contracts;
+using ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation.Settings;
 
 namespace ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation;
 

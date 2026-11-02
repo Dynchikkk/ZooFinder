@@ -1,4 +1,4 @@
-namespace ZooFinder.Infrastructure.Modules.Auth.Dependencies.AccessToken;
+namespace ZooFinder.Infrastructure.Modules.Auth.Dependencies.AccessToken.Settings;
 
 public sealed class JwtAccessTokenSettings
 {

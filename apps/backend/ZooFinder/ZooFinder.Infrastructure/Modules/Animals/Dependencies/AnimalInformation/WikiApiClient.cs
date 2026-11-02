@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Web;
 using ZooFinder.Application.Common.Animals.Exceptions;
+using ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation.Settings;
 
 namespace ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation;
 

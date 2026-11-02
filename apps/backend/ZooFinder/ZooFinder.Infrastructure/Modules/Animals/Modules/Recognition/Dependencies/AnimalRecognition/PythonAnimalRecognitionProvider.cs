@@ -1,5 +1,6 @@
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Validators;
+using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition.Settings;
 
 namespace ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 

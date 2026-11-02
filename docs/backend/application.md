@@ -30,7 +30,8 @@ Modules and Common support recursive child modules.
 | Service | Services/<Name>/ with interface, implementation, and service contracts |
 | Data source | Flat DataSources/ folder; optional contracts beside the interface |
 | Technical dependency | Dependencies/<Name>/ with its own contracts |
-| Constants, helpers, settings | With their owning module or dependency |
+| Constants, helpers | With their owning module or dependency |
+| Settings | Settings/ within the owning module or dependency |
 
 - Service folders omit the Service suffix. A service may implement several related operations.
 - Data sources serve coherent tasks across entities; do not create one per table, method, or service.

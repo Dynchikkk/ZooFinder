@@ -13,6 +13,7 @@ using ZooFinder.Application.Modules.Auth.Modules.Authentication.Services.Auth;
 using ZooFinder.Application.Modules.Auth.Settings;
 using ZooFinder.Infrastructure.Modules.Auth.DataSources;
 using ZooFinder.Infrastructure.Modules.Auth.Dependencies.AccessToken;
+using ZooFinder.Infrastructure.Modules.Auth.Dependencies.AccessToken.Settings;
 using ZooFinder.Infrastructure.Modules.Auth.Dependencies.PasswordHashing;
 using ZooFinder.Infrastructure.Modules.Auth.Dependencies.RefreshTokenGeneration;
 using ZooFinder.Infrastructure.Modules.Auth.Dependencies.RefreshTokenHashing;

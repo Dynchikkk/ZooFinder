@@ -1,6 +1,6 @@
 # API Implementation Plan
 
-Current position: steps 1–6 are implemented; step 7 is next.
+Current position: steps 1–7 are implemented; step 8 is next.
 Implementation status does not imply live SQL Server or end-to-end verification.
 
 Follow the [development rules](../development.md) and [API rules](../backend/api.md).
@@ -30,10 +30,10 @@ The broader [product roadmap](parks-and-recognition-roadmap.md) covers Python, f
    Expose park management and animal lists, details, addition/restoration, editing, and removal.
    Preserve the agreed open park flows and publication/availability rules.
 
-7. [ ] **CSV import — next.**
+7. [x] **CSV import.**
    Decode uploaded CSV into Application contracts; expose preview and apply through the existing import service.
 
-8. [ ] **Park connection requests.**
+8. [ ] **Park connection requests — next.**
    Expose the existing submission, read, approval, manual payment confirmation, and closing scenarios.
 
 9. [ ] **Recognition uploads.**

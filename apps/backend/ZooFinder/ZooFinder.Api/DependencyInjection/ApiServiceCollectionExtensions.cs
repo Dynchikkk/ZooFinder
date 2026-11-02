@@ -20,7 +20,7 @@ internal static class ApiServiceCollectionExtensions
         services.AddAuthModule(configuration);
         services.AddUsersModule();
         services.AddAnimalsModule(configuration);
-        services.AddParksModule();
+        services.AddParksModule(configuration);
 
         return services;
     }

@@ -7,8 +7,10 @@ using ZooFinder.Application.Modules.Animals.Modules.Catalog.Services.AnimalCatal
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 using ZooFinder.Infrastructure.Modules.Animals.DataSources;
 using ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation;
+using ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation.Settings;
 using ZooFinder.Infrastructure.Modules.Animals.Modules.Catalog.DataSources;
 using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
+using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition.Settings;
 
 namespace ZooFinder.Api.DependencyInjection;
 

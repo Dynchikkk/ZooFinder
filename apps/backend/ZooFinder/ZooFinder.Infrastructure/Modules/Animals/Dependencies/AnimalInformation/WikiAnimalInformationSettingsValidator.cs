@@ -1,3 +1,5 @@
+using ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation.Settings;
+
 namespace ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation;
 
 internal static class WikiAnimalInformationSettingsValidator

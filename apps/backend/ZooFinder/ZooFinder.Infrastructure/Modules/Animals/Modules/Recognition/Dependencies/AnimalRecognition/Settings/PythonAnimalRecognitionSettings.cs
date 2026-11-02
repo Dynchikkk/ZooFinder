@@ -1,4 +1,4 @@
-namespace ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
+namespace ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition.Settings;
 
 public sealed class PythonAnimalRecognitionSettings
 {

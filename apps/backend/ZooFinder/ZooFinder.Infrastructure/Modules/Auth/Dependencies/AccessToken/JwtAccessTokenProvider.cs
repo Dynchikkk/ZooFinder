@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using ZooFinder.Application.Modules.Auth.Dependencies.AccessToken;
 using ZooFinder.Domain.Users;
+using ZooFinder.Infrastructure.Modules.Auth.Dependencies.AccessToken.Settings;
 
 namespace ZooFinder.Infrastructure.Modules.Auth.Dependencies.AccessToken;
 

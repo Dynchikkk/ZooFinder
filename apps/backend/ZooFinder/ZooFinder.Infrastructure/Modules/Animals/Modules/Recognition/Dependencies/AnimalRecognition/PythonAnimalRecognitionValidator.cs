@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 using ZooFinder.Application.Shared.ErrorHandling.Exceptions;
 using ZooFinder.Application.Shared.Language.Validators;
+using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition.Settings;
 
 namespace ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 

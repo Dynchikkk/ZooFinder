@@ -1,4 +1,4 @@
-namespace ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation;
+namespace ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation.Settings;
 
 public sealed class WikiAnimalInformationSettings
 {
