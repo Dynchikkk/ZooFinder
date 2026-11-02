@@ -16,3 +16,12 @@ public sealed record UpdateParkAnimalHttpRequest(
     bool IsPublished);
 
 public sealed record ApplyParkAnimalImportHttpRequest(IReadOnlyList<ParkAnimalImportSelection> Rows);
+
+public sealed record ApproveParkConnectionHttpRequest(
+    decimal Amount,
+    string Currency,
+    string? Comment = null);
+
+public sealed record CloseParkConnectionHttpRequest(
+    ParkConnectionStatus Status,
+    string? Comment = null);

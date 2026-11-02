@@ -3,8 +3,11 @@ using ZooFinder.Api.Controllers.Parks.Import;
 using ZooFinder.Application.Modules.Parks.DataSources;
 using ZooFinder.Application.Modules.Parks.Modules.Animals.Services.ParkAnimals;
 using ZooFinder.Application.Modules.Parks.Modules.Catalog.Services.Parks;
+using ZooFinder.Application.Modules.Parks.Modules.Connections.DataSources;
+using ZooFinder.Application.Modules.Parks.Modules.Connections.Services.ParkConnections;
 using ZooFinder.Application.Modules.Parks.Modules.Import.Services.ParkAnimalImport;
 using ZooFinder.Infrastructure.Modules.Parks.DataSources;
+using ZooFinder.Infrastructure.Modules.Parks.Modules.Connections.DataSources;
 
 namespace ZooFinder.Api.DependencyInjection;
 
@@ -26,11 +29,13 @@ internal static class ParksServiceCollectionExtensions
         // Data sources
         services.AddScoped<IParkCatalogDataSource, ParkCatalogDataSource>();
         services.AddScoped<IParkAnimalDataSource, ParkAnimalDataSource>();
+        services.AddScoped<IParkConnectionDataSource, ParkConnectionDataSource>();
 
         // Services
         services.AddScoped<IParkService, ParkService>();
         services.AddScoped<IParkAnimalService, ParkAnimalService>();
         services.AddScoped<IParkAnimalImportService, ParkAnimalImportService>();
+        services.AddScoped<IParkConnectionService, ParkConnectionService>();
 
         return services;
     }

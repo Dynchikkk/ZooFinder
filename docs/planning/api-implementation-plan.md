@@ -1,6 +1,6 @@
 # API Implementation Plan
 
-Current position: steps 1–7 are implemented; step 8 is next.
+Current position: steps 1–8 are implemented; step 9 is next.
 Implementation status does not imply live SQL Server or end-to-end verification.
 
 Follow the [development rules](../development.md) and [API rules](../backend/api.md).
@@ -33,10 +33,10 @@ The broader [product roadmap](parks-and-recognition-roadmap.md) covers Python, f
 7. [x] **CSV import.**
    Decode uploaded CSV into Application contracts; expose preview and apply through the existing import service.
 
-8. [ ] **Park connection requests — next.**
+8. [x] **Park connection requests.**
    Expose the existing submission, read, approval, manual payment confirmation, and closing scenarios.
 
-9. [ ] **Recognition uploads.**
+9. [ ] **Recognition uploads — next.**
    Validate image size/signature, adapt the upload to a stream, and pass language and optional ParkId to the service.
    Keep the .NET adapter aligned with the [Python protocol](../backend/recognition-protocol.md).
    Live inference verification requires the Python service, which is still pending.

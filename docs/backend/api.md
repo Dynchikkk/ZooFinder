@@ -111,3 +111,9 @@ CSV uses UTF-8 (with or without BOM), `;`, and these case-sensitive headers in a
 Quoted fields support separators, escaped quotes, and line breaks. Blank lines are ignored; an empty language defaults to en.
 Malformed CSV returns 400; an oversized file returns 413. ParkImport:MaximumFileBytes defaults to 1 MiB.
 The [Application import rules](application.md#imports) define the row limit, matching, and write guarantees.
+
+### Connection Requests
+
+/api/ParkConnections exposes search by parkId with offset pagination, individual reads, and creation.
+POST actions /{requestId}/approve, /{requestId}/confirm-payment, and /{requestId}/close manage the request workflow.
+Creation returns 201; other operations return 200. All are public in v1; payment confirmation is manual.
