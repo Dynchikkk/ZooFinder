@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Web;
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Common.Animals.Exceptions;
 using ZooFinder.Infrastructure.Modules.Animals.Dependencies.AnimalInformation.Settings;
 
@@ -18,14 +19,17 @@ internal sealed class WikiApiClient
 
     private readonly HttpClient _httpClient;
     private readonly WikiAnimalInformationSettings _settings;
+    private readonly ILogger _logger;
 
-    public WikiApiClient(HttpClient httpClient, WikiAnimalInformationSettings settings)
+    public WikiApiClient(HttpClient httpClient, WikiAnimalInformationSettings settings, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(logger);
         WikiAnimalInformationSettingsValidator.Validate(settings);
 
         _httpClient = httpClient;
         _settings = settings;
+        _logger = logger;
     }
 
     public async Task<WikiApiResponse> QueryAsync(
@@ -55,6 +59,7 @@ internal sealed class WikiApiClient
                 if (result.Error.Code == "maxlag" || result.Error.Code == "ratelimited" ||
                     result.Error.Code == "readonly" || result.Error.Code == "search-error")
                 {
+                    _logger.LogWarning("Wikipedia temporarily rejected a request with API code {ApiCode}", result.Error.Code);
                     throw new AnimalInformationUnavailableException("Wikipedia is temporarily unavailable.");
                 }
 
@@ -65,14 +70,17 @@ internal sealed class WikiApiClient
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
+            _logger.LogWarning(exception, "Wikipedia request timed out");
             throw new AnimalInformationUnavailableException("The Wikipedia request timed out.", exception);
         }
         catch (HttpRequestException exception)
         {
+            _logger.LogWarning(exception, "Wikipedia request failed with HTTP status {StatusCode}", (int?)exception.StatusCode);
             throw new AnimalInformationUnavailableException("Wikipedia could not be reached.", exception);
         }
         catch (IOException exception)
         {
+            _logger.LogWarning(exception, "Wikipedia response could not be read");
             throw new AnimalInformationUnavailableException("The Wikipedia response could not be read.", exception);
         }
         catch (JsonException exception)

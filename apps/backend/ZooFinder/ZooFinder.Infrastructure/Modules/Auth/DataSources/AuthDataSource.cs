@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Modules.Auth.DataSources;
 using ZooFinder.Domain.Users;
 using ZooFinder.Infrastructure.Persistence;
@@ -9,12 +10,15 @@ namespace ZooFinder.Infrastructure.Modules.Auth.DataSources;
 public sealed class AuthDataSource : IAuthDataSource
 {
     private readonly ZooFinderDbContext _dbContext;
+    private readonly ILogger<AuthDataSource> _logger;
 
-    public AuthDataSource(ZooFinderDbContext dbContext)
+    public AuthDataSource(ZooFinderDbContext dbContext, ILogger<AuthDataSource> logger)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public Task<UserAccount?> GetUserAccountByLoginAsync(string login, CancellationToken cancellationToken)
@@ -44,6 +48,7 @@ public sealed class AuthDataSource : IAuthDataSource
                     .IgnoreQueryFilters()
                     .AnyAsync(account => account.Login == userAccount.Login && account.Id != userAccount.Id, cancellationToken))
             {
+                _logger.LogDebug("Concurrent registration prevented creation of user {UserAccountId}", userAccount.Id);
                 return false;
             }
 
@@ -103,6 +108,7 @@ public sealed class AuthDataSource : IAuthDataSource
         }
         catch (DbUpdateConcurrencyException)
         {
+            _logger.LogDebug("Concurrent update prevented rotation of session {SessionId}", refreshSessionId);
             return false;
         }
     }

@@ -21,6 +21,16 @@ See [Backend](README.md) for pending integrations.
 - SignalR hubs and discussion event transport belong to [API](api.md#discussions).
 - Do not introduce a generic repository or UnitOfWork.
 
+## Logging
+
+- Use ILogger<T> with constant structured templates; nested HTTP clients share their provider's category.
+- External-service timeouts, transport failures, and temporary rejection are Warning events; transport exceptions retain their causes.
+  Handled concurrency conflicts are Debug events. Omit routine queries, cache hits, and cryptographic operations.
+- Record only IDs, counts, statuses, and explicitly recognized API error codes. Never log URLs, query text,
+  bodies, headers, configuration, credentials/hashes, tokens, or user content, even at Debug. Exception messages must not embed them.
+- Caller cancellation and propagated protocol/unexpected failures are not logged here. API owns final error diagnostics;
+  an Application fallback decision is a separate event from the external failure that caused it.
+
 ## Persistence Rules
 
 ### Reads and Writes

@@ -12,6 +12,7 @@ internal static class ApiServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
 
         // Infrastructure
+        services.AddZooFinderLogging();
         services.AddZooFinderErrorHandling();
         services.AddPersistence(configuration);
         services.AddCaching(configuration);

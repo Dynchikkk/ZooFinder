@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Exceptions;
 using ZooFinder.Application.Shared.ErrorHandling.Exceptions;
@@ -27,12 +28,16 @@ internal sealed class PythonAnimalRecognitionApiClient
     private readonly HttpClient _httpClient;
     private readonly PythonAnimalRecognitionSettings _settings;
     private readonly Uri _endpoint;
+    private readonly ILogger _logger;
 
-    public PythonAnimalRecognitionApiClient(HttpClient httpClient, PythonAnimalRecognitionSettings settings)
+    public PythonAnimalRecognitionApiClient(HttpClient httpClient, PythonAnimalRecognitionSettings settings, ILogger logger)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+
         _httpClient = httpClient;
         _settings = settings;
         _endpoint = new Uri(settings.BaseUrl!, RecognitionPath);
+        _logger = logger;
     }
 
     public async Task<PythonRecognitionResponse> RecognizeAsync(
@@ -57,14 +62,17 @@ internal sealed class PythonAnimalRecognitionApiClient
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
+            _logger.LogWarning(exception, "Recognition request timed out");
             throw new AnimalRecognitionUnavailableException("Recognition request timed out.", exception);
         }
         catch (HttpRequestException exception)
         {
+            _logger.LogWarning(exception, "Recognition request failed with HTTP status {StatusCode}", (int?)exception.StatusCode);
             throw new AnimalRecognitionUnavailableException("Recognition service could not be reached.", exception);
         }
         catch (IOException exception)
         {
+            _logger.LogWarning(exception, "Recognition response could not be read");
             throw new AnimalRecognitionUnavailableException("Recognition response could not be read.", exception);
         }
         catch (JsonException exception)
@@ -87,15 +95,17 @@ internal sealed class PythonAnimalRecognitionApiClient
         return content;
     }
 
-    private static void ValidateAvailability(HttpStatusCode status)
+    private void ValidateAvailability(HttpStatusCode status)
     {
         if (status == HttpStatusCode.RequestTimeout || status == HttpStatusCode.TooManyRequests)
         {
+            _logger.LogWarning("Recognition service is unavailable with HTTP status {StatusCode}", (int)status);
             throw new AnimalRecognitionUnavailableException("Recognition service is busy or unavailable.");
         }
 
         if (status >= HttpStatusCode.InternalServerError)
         {
+            _logger.LogWarning("Recognition service is unavailable with HTTP status {StatusCode}", (int)status);
             throw new AnimalRecognitionUnavailableException("Recognition service failed to process the request.");
         }
     }

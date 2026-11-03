@@ -61,6 +61,16 @@ Validators do not normalize or mutate input.
 Reusable normalization neither validates nor throws request-validation errors.
 Application settings do not read IConfiguration or appsettings.
 
+### Logging
+
+- Use ILogger<T> from Microsoft.Extensions.Logging.Abstractions; API owns providers and category filters.
+- Log significant persisted outcomes at Information, session diagnostics at Debug, and fallback decisions at Warning.
+  Omit routine reads and method entry/exit logs; exceptions propagated to callers are not logged again here.
+- Use constant message templates with explicitly selected IDs, statuses, and counts. Never log whole objects,
+  credentials/hashes, tokens, settings, user content, contacts, raw exception messages, or exceptions.
+  These restrictions also apply to Debug and local development.
+- Guard computations performed only for logging with IsEnabled; passing existing scalar values needs no extra guard.
+
 ## Ownership
 
 Follow the recursive sibling/ancestor rules in [Architecture](../architecture.md).

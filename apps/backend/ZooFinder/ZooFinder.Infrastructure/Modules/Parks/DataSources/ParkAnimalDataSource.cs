@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Modules.Parks.DataSources;
 using ZooFinder.Application.Shared.ErrorHandling.Exceptions;
 using ZooFinder.Application.Shared.Pagination.Contracts;
@@ -10,12 +11,15 @@ namespace ZooFinder.Infrastructure.Modules.Parks.DataSources;
 public sealed class ParkAnimalDataSource : IParkAnimalDataSource
 {
     private readonly ZooFinderDbContext _dbContext;
+    private readonly ILogger<ParkAnimalDataSource> _logger;
 
-    public ParkAnimalDataSource(ZooFinderDbContext dbContext)
+    public ParkAnimalDataSource(ZooFinderDbContext dbContext, ILogger<ParkAnimalDataSource> logger)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public Task<ParkAnimal?> GetAsync(Guid parkAnimalId, CancellationToken cancellationToken)
@@ -124,6 +128,8 @@ public sealed class ParkAnimalDataSource : IParkAnimalDataSource
         }
         catch (DbUpdateConcurrencyException)
         {
+            _logger.LogDebug(
+                "Concurrent update prevented saving {RowCount} animal memberships for park {ParkId}", parkAnimals.Count, parkId);
             throw new ConflictException("Park animals changed while the batch was being saved.");
         }
     }

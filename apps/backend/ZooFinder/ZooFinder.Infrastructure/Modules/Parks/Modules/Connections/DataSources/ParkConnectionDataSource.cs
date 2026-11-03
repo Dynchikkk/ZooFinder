@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Modules.Parks.Modules.Connections.DataSources;
 using ZooFinder.Application.Shared.Pagination.Contracts;
 using ZooFinder.Domain.Parks;
@@ -10,12 +11,15 @@ namespace ZooFinder.Infrastructure.Modules.Parks.Modules.Connections.DataSources
 public sealed class ParkConnectionDataSource : IParkConnectionDataSource
 {
     private readonly ZooFinderDbContext _dbContext;
+    private readonly ILogger<ParkConnectionDataSource> _logger;
 
-    public ParkConnectionDataSource(ZooFinderDbContext dbContext)
+    public ParkConnectionDataSource(ZooFinderDbContext dbContext, ILogger<ParkConnectionDataSource> logger)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public Task<ParkConnectionRequest?> GetAsync(Guid requestId, CancellationToken cancellationToken)
@@ -83,6 +87,9 @@ public sealed class ParkConnectionDataSource : IParkConnectionDataSource
 
         if (existingRequest == null)
         {
+            _logger.LogDebug(
+                "Connection request {ConnectionRequestId} no longer matches expected status {ExpectedStatus}",
+                request.Id, expectedStatus);
             return false;
         }
 
@@ -101,6 +108,7 @@ public sealed class ParkConnectionDataSource : IParkConnectionDataSource
         }
         catch (DbUpdateConcurrencyException)
         {
+            _logger.LogDebug("Concurrent update prevented saving connection request {ConnectionRequestId}", request.Id);
             return false;
         }
     }

@@ -14,6 +14,7 @@ and [Application](application.md) for scenario behavior.
 | API-owned settings | `Configuration/<Module>/Settings/` |
 | HTTP error mapping and responses | ErrorHandling/ |
 | SignalR hubs and event transport | `Realtime/<Module>/` |
+| Request logging middleware | Logging/ |
 
 - ApiServiceCollectionExtensions is the single composition entry point; module details stay in their registration classes.
 - Use one registration class per primary module: Auth, Users, Animals, Parks, Discussions.
@@ -41,7 +42,7 @@ and [Application](application.md) for scenario behavior.
 ## Errors
 
 Use Problem Details for HTTP errors. Expected Application messages are public; internal exception details
-and raw provider responses must not reach clients. Custom error logging is deferred.
+and raw provider responses must not reach clients.
 
 | Outcome | HTTP status |
 | --- | --- |
@@ -56,6 +57,21 @@ and raw provider responses must not reach clients. Custom error logging is defer
 Malformed HTTP requests preserve their transport status with a generic message.
 Caller cancellation is not provider unavailability. Validation responses retain field errors;
 empty error responses use Problem Details when the client accepts JSON.
+
+## Logging
+
+JSON console output includes scopes. RequestLoggingMiddleware supplies RequestId, matching Problem Details traceId,
+and writes method, route template, and final status at Debug after exception handling; unmatched paths use a fixed label.
+It does not record duration, actual paths, query strings, headers, bodies, route values, or user content.
+Handled unexpected HTTP failures log their exception at Error, retaining the message, stack, and inner causes.
+ASP.NET Core owns diagnostics for escaping HTTP failures and Hub invocation errors; the request middleware does not log exceptions.
+Expected Application errors add no error log; Infrastructure owns external-unavailability warnings.
+Microsoft/System diagnostics are enabled at Warning and above; host lifetime events remain at Information.
+HTTP clients use standard diagnostics controlled by category filters. Application logs do not dump bodies or credentials;
+exception logging does not automatically redact secrets, so exception messages must not embed credentials or user payloads.
+EF sensitive-data logging and IdentityModel PII logging remain disabled.
+Logging:LogLevel supports namespace/class overrides and None; default ZooFinder level is Information.
+The standard configuration provider can reload logging filters independently of application settings.
 
 ## Configuration
 

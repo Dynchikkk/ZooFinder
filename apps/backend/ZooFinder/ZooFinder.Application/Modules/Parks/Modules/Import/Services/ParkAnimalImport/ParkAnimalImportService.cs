@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Common.Animals.Dependencies.AnimalInformation;
 using ZooFinder.Application.Common.Animals.Exceptions;
 using ZooFinder.Application.Common.Animals.Extensions;
@@ -23,22 +24,26 @@ public sealed class ParkAnimalImportService : IParkAnimalImportService
     private readonly IParkAnimalDataSource _parkAnimalDataSource;
     private readonly IAnimalInformationProvider _animalInformationProvider;
     private readonly IAnimalRegistrationService _animalRegistrationService;
+    private readonly ILogger<ParkAnimalImportService> _logger;
 
     public ParkAnimalImportService(
         IParkCatalogDataSource parkCatalogDataSource,
         IParkAnimalDataSource parkAnimalDataSource,
         IAnimalInformationProvider animalInformationProvider,
-        IAnimalRegistrationService animalRegistrationService)
+        IAnimalRegistrationService animalRegistrationService,
+        ILogger<ParkAnimalImportService> logger)
     {
         ArgumentNullException.ThrowIfNull(parkCatalogDataSource);
         ArgumentNullException.ThrowIfNull(parkAnimalDataSource);
         ArgumentNullException.ThrowIfNull(animalInformationProvider);
         ArgumentNullException.ThrowIfNull(animalRegistrationService);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _parkCatalogDataSource = parkCatalogDataSource;
         _parkAnimalDataSource = parkAnimalDataSource;
         _animalInformationProvider = animalInformationProvider;
         _animalRegistrationService = animalRegistrationService;
+        _logger = logger;
     }
 
     public async Task<ParkAnimalImportPreviewResponse> PreviewAsync(
@@ -56,6 +61,14 @@ public sealed class ParkAnimalImportService : IParkAnimalImportService
         {
             var result = await PreviewRowAsync(rowIndex, request.Rows[rowIndex], identities, cancellationToken);
             results.Add(result);
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            int errorCount = results.Count(row => row.Error != null);
+            _logger.LogInformation(
+                "Import preview for park {ParkId} contains {RowCount} rows with {ErrorCount} errors",
+                request.ParkId, results.Count, errorCount);
         }
 
         return new ParkAnimalImportPreviewResponse(results);
@@ -98,6 +111,7 @@ public sealed class ParkAnimalImportService : IParkAnimalImportService
             .Select(parkAnimal => parkAnimal.Id)
             .ToArray();
 
+        _logger.LogInformation("Import was applied to park {ParkId} with {RowCount} rows", request.ParkId, parkAnimalIds.Length);
         return new ParkAnimalImportResponse(parkAnimalIds);
     }
 

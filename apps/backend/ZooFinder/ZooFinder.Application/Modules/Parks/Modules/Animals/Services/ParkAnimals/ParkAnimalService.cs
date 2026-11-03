@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Common.Animals.Dependencies.AnimalInformation;
 using ZooFinder.Application.Common.Animals.Exceptions;
 using ZooFinder.Application.Common.Animals.Services.AnimalRegistration;
@@ -17,22 +18,26 @@ public sealed class ParkAnimalService : IParkAnimalService
     private readonly IParkAnimalDataSource _parkAnimalDataSource;
     private readonly IAnimalRegistrationService _animalRegistrationService;
     private readonly IAnimalInformationProvider _animalInformationProvider;
+    private readonly ILogger<ParkAnimalService> _logger;
 
     public ParkAnimalService(
         IParkCatalogDataSource parkCatalogDataSource,
         IParkAnimalDataSource parkAnimalDataSource,
         IAnimalRegistrationService animalRegistrationService,
-        IAnimalInformationProvider animalInformationProvider)
+        IAnimalInformationProvider animalInformationProvider,
+        ILogger<ParkAnimalService> logger)
     {
         ArgumentNullException.ThrowIfNull(parkCatalogDataSource);
         ArgumentNullException.ThrowIfNull(parkAnimalDataSource);
         ArgumentNullException.ThrowIfNull(animalRegistrationService);
         ArgumentNullException.ThrowIfNull(animalInformationProvider);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _parkCatalogDataSource = parkCatalogDataSource;
         _parkAnimalDataSource = parkAnimalDataSource;
         _animalRegistrationService = animalRegistrationService;
         _animalInformationProvider = animalInformationProvider;
+        _logger = logger;
     }
 
     public async Task<ParkAnimalResponse> GetAsync(Guid parkAnimalId, CancellationToken cancellationToken)
@@ -126,6 +131,8 @@ public sealed class ParkAnimalService : IParkAnimalService
         }
         catch (AnimalInformationUnavailableException)
         {
+            _logger.LogWarning(
+                "Saved information was used for animal {AnimalId} because the information provider was unavailable", animal.Id);
             return null;
         }
     }

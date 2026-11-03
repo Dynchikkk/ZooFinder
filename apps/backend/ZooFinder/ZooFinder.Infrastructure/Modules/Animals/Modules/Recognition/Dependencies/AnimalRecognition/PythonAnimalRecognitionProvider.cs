@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition;
 using ZooFinder.Application.Modules.Animals.Modules.Recognition.Validators;
 using ZooFinder.Infrastructure.Modules.Animals.Modules.Recognition.Dependencies.AnimalRecognition.Settings;
@@ -13,12 +14,15 @@ public sealed class PythonAnimalRecognitionProvider : IAnimalRecognitionProvider
     private readonly PythonAnimalRecognitionApiClient _client;
     private readonly PythonAnimalRecognitionSettings _settings;
 
-    public PythonAnimalRecognitionProvider(HttpClient httpClient, PythonAnimalRecognitionSettings settings)
+    public PythonAnimalRecognitionProvider(
+        HttpClient httpClient,
+        PythonAnimalRecognitionSettings settings,
+        ILogger<PythonAnimalRecognitionProvider> logger)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         PythonAnimalRecognitionValidator.ValidateSettings(settings);
 
-        _client = new PythonAnimalRecognitionApiClient(httpClient, settings);
+        _client = new PythonAnimalRecognitionApiClient(httpClient, settings, logger);
         _settings = settings;
     }
 

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Common.Animals.Dependencies.AnimalInformation;
 using ZooFinder.Application.Shared.Language.Validators;
 using ZooFinder.Application.Shared.Pagination.Contracts;
@@ -24,11 +25,15 @@ public sealed class WikiAnimalInformationProvider : IAnimalInformationProvider
     private readonly IMemoryCache _cache;
     private readonly WikiAnimalInformationSettings _settings;
 
-    public WikiAnimalInformationProvider(HttpClient httpClient, IMemoryCache cache, WikiAnimalInformationSettings settings)
+    public WikiAnimalInformationProvider(
+        HttpClient httpClient,
+        IMemoryCache cache,
+        WikiAnimalInformationSettings settings,
+        ILogger<WikiAnimalInformationProvider> logger)
     {
         ArgumentNullException.ThrowIfNull(cache);
 
-        _client = new WikiApiClient(httpClient, settings);
+        _client = new WikiApiClient(httpClient, settings, logger);
         _cache = cache;
         _settings = settings;
     }

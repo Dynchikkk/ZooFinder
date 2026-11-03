@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Modules.Parks.DataSources;
 using ZooFinder.Application.Modules.Parks.Extensions;
 using ZooFinder.Application.Modules.Parks.Modules.Connections.Constants;
@@ -15,19 +16,23 @@ public sealed class ParkConnectionService : IParkConnectionService
     private readonly IParkCatalogDataSource _parkCatalogDataSource;
     private readonly IParkConnectionDataSource _parkConnectionDataSource;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<ParkConnectionService> _logger;
 
     public ParkConnectionService(
         IParkCatalogDataSource parkCatalogDataSource,
         IParkConnectionDataSource parkConnectionDataSource,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<ParkConnectionService> logger)
     {
         ArgumentNullException.ThrowIfNull(parkCatalogDataSource);
         ArgumentNullException.ThrowIfNull(parkConnectionDataSource);
         ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _parkCatalogDataSource = parkCatalogDataSource;
         _parkConnectionDataSource = parkConnectionDataSource;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     public async Task<ParkConnectionResponse> GetAsync(Guid requestId, CancellationToken cancellationToken)
@@ -84,6 +89,8 @@ public sealed class ParkConnectionService : IParkConnectionService
             throw new ConflictException("Park already has an unfinished connection request.");
         }
 
+        _logger.LogInformation(
+            "Connection request {ConnectionRequestId} was created for park {ParkId}", connection.Id, connection.ParkId);
         return ToResponse(connection);
     }
 
@@ -194,6 +201,10 @@ public sealed class ParkConnectionService : IParkConnectionService
         {
             throw new ConflictException("Connection request changed.");
         }
+
+        _logger.LogInformation(
+            "Connection request {ConnectionRequestId} for park {ParkId} changed from {PreviousStatus} to {Status}",
+            connection.Id, connection.ParkId, expectedStatus, connection.Status);
     }
 
     private async Task ValidateParkAsync(Guid parkId, CancellationToken cancellationToken)

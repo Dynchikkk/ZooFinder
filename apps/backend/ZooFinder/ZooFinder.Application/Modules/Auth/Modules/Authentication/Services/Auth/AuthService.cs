@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using ZooFinder.Application.Shared.ErrorHandling.Exceptions;
 using ZooFinder.Application.Modules.Auth.DataSources;
 using ZooFinder.Application.Modules.Auth.Dependencies.AccessToken;
@@ -19,6 +20,7 @@ public sealed class AuthService : IAuthService
     private readonly IPasswordHasher _passwordHasher;
     private readonly AuthSettings _authSettings;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         IAuthDataSource authDataSource,
@@ -27,7 +29,8 @@ public sealed class AuthService : IAuthService
         IRefreshTokenHasher refreshTokenHasher,
         IPasswordHasher passwordHasher,
         AuthSettings authSettings,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<AuthService> logger)
     {
         ArgumentNullException.ThrowIfNull(authDataSource);
         ArgumentNullException.ThrowIfNull(accessTokenProvider);
@@ -36,6 +39,7 @@ public sealed class AuthService : IAuthService
         ArgumentNullException.ThrowIfNull(passwordHasher);
         ArgumentNullException.ThrowIfNull(authSettings);
         ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(logger);
 
         if (authSettings.RefreshSessionLifetime <= TimeSpan.Zero)
         {
@@ -49,6 +53,7 @@ public sealed class AuthService : IAuthService
         _passwordHasher = passwordHasher;
         _authSettings = authSettings;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
@@ -109,6 +114,7 @@ public sealed class AuthService : IAuthService
             throw new ConflictException("Login is already taken.");
         }
 
+        _logger.LogInformation("User account {UserAccountId} was registered", userAccount.Id);
         return new AuthResponse(userAccount.Id, accessToken, refreshToken, refreshSession.ExpiresAtUtc);
     }
 
@@ -148,6 +154,7 @@ public sealed class AuthService : IAuthService
 
         await _authDataSource.AddRefreshSessionAsync(refreshSession, cancellationToken);
 
+        _logger.LogDebug("Session {SessionId} was created for user {UserAccountId}", refreshSession.Id, userAccount.Id);
         return new AuthResponse(userAccount.Id, accessToken, refreshToken, refreshSession.ExpiresAtUtc);
     }
 
@@ -187,6 +194,7 @@ public sealed class AuthService : IAuthService
             throw new UnauthorizedException("Refresh session is no longer active.");
         }
 
+        _logger.LogDebug("Session {SessionId} was refreshed for user {UserAccountId}", refreshSession.Id, userAccount.Id);
         return new AuthResponse(userAccount.Id, accessToken, newRefreshToken, newExpiresAtUtc);
     }
 
@@ -209,13 +217,18 @@ public sealed class AuthService : IAuthService
 
         DateTime currentTime = GetCurrentTime();
         await _authDataSource.RevokeRefreshSessionAsync(refreshSession.Id, currentTime, cancellationToken);
+
+        _logger.LogDebug(
+            "Session {SessionId} was revoked for user {UserAccountId}", refreshSession.Id, refreshSession.UserAccountId);
     }
 
-    public Task RevokeAllSessionsAsync(Guid currentUserAccountId, CancellationToken cancellationToken)
+    public async Task RevokeAllSessionsAsync(Guid currentUserAccountId, CancellationToken cancellationToken)
     {
         AuthValidator.ValidateUserAccountId(currentUserAccountId);
 
-        return _authDataSource.RevokeAllRefreshSessionsAsync(currentUserAccountId, GetCurrentTime(), cancellationToken);
+        await _authDataSource.RevokeAllRefreshSessionsAsync(currentUserAccountId, GetCurrentTime(), cancellationToken);
+
+        _logger.LogInformation("All sessions were revoked for user {UserAccountId}", currentUserAccountId);
     }
 
     private string NormalizeRefreshToken(string? refreshToken)
