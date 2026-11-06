@@ -208,8 +208,40 @@ Model/research plans belong to the [roadmap](../planning/parks-and-recognition-r
 | Factory fallback | ConnectionStrings:ZooFinder; local Windows authentication |
 | Runtime connection | API registration using ConnectionStrings:ZooFinder |
 
-Do not commit credentials.
+Do not commit production credentials. The shared local credentials in .env.dev are for development only.
 The application neither initializes nor migrates the database at startup.
+
+### Local SQL Server in Docker
+
+The root compose.yaml runs SQL Server 2022 with Docker Desktop in Linux container mode; .env selects the edition through MSSQL_PID.
+API continues to run on the host. From the repository root, initialize .env and enter dev when prompted:
+
+```powershell
+./scripts/init-env.ps1
+docker compose up -d --wait sqlserver
+docker compose ps
+```
+
+.env is ignored by Git and is read by Compose, not automatically by ASP.NET Core.
+The script confirms replacement of an existing .env and copies the selected .env.<name> file from the repository root.
+.env.dev contains shared local settings; other environment files, such as .env.prod, are ignored by Git.
+Use .env.example as their template. The script works independently of the current directory and does not start containers.
+Set ConnectionStrings:ZooFinder in the local API configuration, using the password from .env:
+
+```text
+Server=localhost,14333;Database=ZooFinder;User Id=sa;Password=YOUR_LOCAL_PASSWORD;Encrypt=true;TrustServerCertificate=true
+```
+
+DB_HOST, DB_PORT, DB_NAME, DB_USER, and DB_PASSWORD describe the host-side connection; DB_PORT also selects the published port.
+Compose passes DB_PASSWORD to SQL Server as MSSQL_SA_PASSWORD. DB_NAME and DB_USER do not create a database or login.
+For DBeaver, use SQL Server authentication, localhost:14333, login sa, and the password from .env.
+Select master until ZooFinder has been created; for this local server, set encrypt=true and trustServerCertificate=true.
+The SQL port is bound to localhost; the internal server port remains 1433.
+The named volume preserves data across container recreation and `docker compose down`; `down -v` deletes it.
+Changing .env does not change the sa password in an existing data volume.
+Use `docker compose stop sqlserver` to stop the server and the up command above to start it again.
+This starts the server only; the ZooFinder database and tables require the agreed Initial migration.
+For EF CLI database updates, supply the same connection string through ConnectionStrings__ZooFinder.
 
 Follow [migration policy](../development.md#database-migrations):
 retain the factory/context and create Initial only after model agreement.

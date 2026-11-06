@@ -1,5 +1,7 @@
 .env
-.env.prod
+.env.*
+!.env.dev
+!.env.example
 
 apps/backend/MotorsportErp.WebApi/wwwroot/uploads
 
